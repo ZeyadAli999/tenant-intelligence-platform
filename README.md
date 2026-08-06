@@ -3,7 +3,7 @@
 ## Instructor Evaluation Access
 
 > [!IMPORTANT]
-> The assigned instructor/evaluator should open the following private document inside the submitted Google Drive folder:
+> The private credentials document is located inside the same Google Drive folder whose link was submitted separately through the Google Form together with the certificates:
 >
 > **`00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS`**
 >
@@ -11,6 +11,12 @@
 > - The dedicated **Groq API Key** (`GROQ_API_KEY`)
 > - The **Administrator Password**
 > - The exact instructor tenant and account login information
+
+### Groq API Key Options
+
+The assigned instructor has two valid options:
+- **Option 1:** Create and use a personal free Groq API key from [https://console.groq.com/keys](https://console.groq.com/keys).
+- **Option 2:** To avoid account creation or if any external issue occurs, use the dedicated instructor-only Groq API key supplied in the private document **`00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS`**.
 
 ### Quick Setup Steps for the Instructor
 
@@ -23,7 +29,7 @@
    .\scripts\reviewer-setup.ps1
    ```
 3. When securely prompted:
-   - Paste the **Groq API Key** from the private document.
+   - Provide your chosen **Groq API Key** (Option 1 or Option 2).
    - Paste the **Administrator Password** from the private document.
 4. Open the application in your browser at [http://localhost:3000](http://localhost:3000).
 5. Log in using the instructor credentials from the private document:
