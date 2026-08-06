@@ -70,20 +70,20 @@ async def test_bootstrap_reactivates_disabled_admin(
     async with test_database.sessions() as session:
         res = await bootstrap_identity(
             session,
-            tenant_name="Disabled Tenant",
-            tenant_code="disabled-tenant",
-            admin_email="disabled@example.com",
+            tenant_name="Inactive Tenant",
+            tenant_code="inactive-tenant",
+            admin_email="inactive@example.com",
             admin_password=password,
         )
-        res.administrator.status = "disabled"
+        res.administrator.status = "inactive"
         await session.commit()
 
     async with test_database.sessions() as session:
         re_res = await bootstrap_identity(
             session,
-            tenant_name="Disabled Tenant",
-            tenant_code="disabled-tenant",
-            admin_email="disabled@example.com",
+            tenant_name="Inactive Tenant",
+            tenant_code="inactive-tenant",
+            admin_email="inactive@example.com",
             admin_password="New-Password-Ignored-456!",
         )
         assert re_res.administrator.status == "active"
