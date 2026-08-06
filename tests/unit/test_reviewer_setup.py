@@ -41,13 +41,17 @@ def test_scripts_reference_canonical_urls_and_ports():
     ps_content = PS_SCRIPT.read_text(encoding="utf-8")
     sh_content = SH_SCRIPT.read_text(encoding="utf-8")
 
-    # Check for canonical frontend URL
-    assert "http://localhost:3000" in ps_content
-    assert "http://localhost:3000" in sh_content
+    # Check for dynamic frontend and backend readiness URLs
+    assert "http://localhost:$frontendPort" in ps_content
+    assert "http://localhost:${FRONTEND_PORT}" in sh_content
+    assert "http://localhost:${apiPort}/api/health/ready" in ps_content
+    assert "http://localhost:${API_PORT}/api/health/ready" in sh_content
 
-    # Check for canonical backend readiness URL
-    assert "http://localhost:8000/api/health/ready" in ps_content
-    assert "http://localhost:8000/api/health/ready" in sh_content
+    # Check for 3000 and 8000 default fallbacks
+    assert "3000" in ps_content
+    assert "8000" in ps_content
+    assert "3000" in sh_content
+    assert "8000" in sh_content
 
     # Ensure no temporary developer ports (e.g. 3001, 8001, 5433) are hardcoded in canonical scripts
     forbidden_ports = [":3001", ":8001", ":5433", ":9002"]
@@ -172,11 +176,29 @@ def test_postgres_port_conflict_prevention_and_internal_endpoint():
     # Internal services connect using container DNS postgres:5432
     assert "@postgres:5432" in compose_content
 
-    # Setup scripts contain early application port conflict checks
+
+def test_scripts_respect_environment_port_overrides():
+    """Verify setup scripts resolve FRONTEND_PORT and API_PORT/BACKEND_PORT dynamically from process environment."""
     ps_content = PS_SCRIPT.read_text(encoding="utf-8")
     sh_content = SH_SCRIPT.read_text(encoding="utf-8")
 
-    assert "Test-IsPortOccupied 3000" in ps_content
-    assert "Test-IsPortOccupied 8000" in ps_content
-    assert "is_port_occupied 3000" in sh_content
-    assert "is_port_occupied 8000" in sh_content
+    # PowerShell port resolution & error messaging
+    assert "Get-ConfiguredPort" in ps_content
+    assert "Test-IsPortOccupied $frontendPort" in ps_content
+    assert "Test-IsPortOccupied $apiPort" in ps_content
+    assert (
+        "Required application port $frontendPort is already in use" in ps_content
+    )
+    assert "Required application port $apiPort is already in use" in ps_content
+
+    # Bash port resolution & error messaging
+    assert "get_configured_port" in sh_content
+    assert 'is_port_occupied "$FRONTEND_PORT"' in sh_content
+    assert 'is_port_occupied "$API_PORT"' in sh_content
+    assert (
+        'Required application port $FRONTEND_PORT is already in use'
+        in sh_content
+    )
+    assert (
+        'Required application port $API_PORT is already in use' in sh_content
+    )

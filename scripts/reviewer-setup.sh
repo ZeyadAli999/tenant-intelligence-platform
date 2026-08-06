@@ -82,10 +82,38 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -f "docker-compose.yml" ] || [ ! -f ".env.example" ]; then
-  echo "Error: Required project files not found in $REPO_ROOT" >&2
-  exit 1
+ENV_PATH="$REPO_ROOT/.env"
+if [ ! -f "$ENV_PATH" ] && [ -f "$REPO_ROOT/.env.example" ]; then
+  cp "$REPO_ROOT/.env.example" "$ENV_PATH"
+  echo "Created .env from .env.example"
 fi
+
+get_configured_port() {
+  local env_var="$1"
+  local alt_var="$2"
+  local file_key="$3"
+  local default_port="$4"
+
+  if [ -n "${!env_var:-}" ]; then
+    echo "${!env_var}"
+    return
+  fi
+  if [ -n "$alt_var" ] && [ -n "${!alt_var:-}" ]; then
+    echo "${!alt_var}"
+    return
+  fi
+  local file_val
+  file_val="$(get_env_var "$ENV_PATH" "$file_key")"
+  if [ -n "$file_val" ]; then
+    echo "$file_val"
+    return
+  fi
+  echo "$default_port"
+}
+
+FRONTEND_PORT="$(get_configured_port "FRONTEND_PORT" "" "FRONTEND_PORT" "3000")"
+API_PORT="$(get_configured_port "API_PORT" "BACKEND_PORT" "API_PORT" "8000")"
+export FRONTEND_PORT API_PORT
 
 is_port_occupied() {
   local port="$1"
@@ -98,13 +126,13 @@ is_port_occupied() {
   fi
 }
 
-if is_port_occupied 3000; then
-  echo "Error: Required application port 3000 is already in use by another process. Please free port 3000 or set FRONTEND_PORT before running setup." >&2
+if is_port_occupied "$FRONTEND_PORT"; then
+  echo "Error: Required application port $FRONTEND_PORT is already in use by another process. Please free port $FRONTEND_PORT or set FRONTEND_PORT before running setup." >&2
   exit 1
 fi
 
-if is_port_occupied 8000; then
-  echo "Error: Required application port 8000 is already in use by another process. Please free port 8000 or set API_PORT before running setup." >&2
+if is_port_occupied "$API_PORT"; then
+  echo "Error: Required application port $API_PORT is already in use by another process. Please free port $API_PORT or set API_PORT or BACKEND_PORT before running setup." >&2
   exit 1
 fi
 
@@ -200,12 +228,12 @@ FRONTEND_READY=0
 
 while [ "$ELAPSED" -lt "$TIMEOUT" ]; do
   if [ "$BACKEND_READY" -eq 0 ]; then
-    if curl -sf "http://localhost:8000/api/health/ready" | grep -q '"status":"ready"'; then
+    if curl -sf "http://localhost:${API_PORT}/api/health/ready" | grep -q '"status":"ready"'; then
       BACKEND_READY=1
     fi
   fi
   if [ "$FRONTEND_READY" -eq 0 ]; then
-    if curl -sf "http://localhost:3000/api/health" | grep -q '"status":"ok"'; then
+    if curl -sf "http://localhost:${FRONTEND_PORT}/api/health" | grep -q '"status":"ok"'; then
       FRONTEND_READY=1
     fi
   fi
@@ -247,7 +275,7 @@ trap - EXIT INT TERM
 
 # Stage 7: Verifying login readiness
 echo "[Stage 7/7] Verifying login readiness..."
-if ! curl -sf "http://localhost:8000/api/health/live" >/dev/null; then
+if ! curl -sf "http://localhost:${API_PORT}/api/health/live" >/dev/null; then
   echo "Error: API liveness check failed after bootstrap." >&2
   exit 1
 fi
@@ -256,8 +284,8 @@ echo ""
 echo "======================================================================"
 echo "INSTRUCTOR EVALUATION WORKSPACE READY"
 echo "======================================================================"
-echo "Application URL:         http://localhost:3000"
-echo "API Documentation URL:   http://localhost:8000/docs"
+echo "Application URL:         http://localhost:${FRONTEND_PORT}"
+echo "API Documentation URL:   http://localhost:${API_PORT}/docs"
 echo "Tenant Code:             $TENANT_CODE"
 echo "Administrator Email:     $ADMIN_EMAIL"
 echo "Administrator Full Name: $ADMIN_FULL_NAME"

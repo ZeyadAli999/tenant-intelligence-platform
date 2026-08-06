@@ -120,18 +120,50 @@ function Test-IsPortOccupied([int]$port) {
     }
 }
 
+function Get-ConfiguredPort([string]$envVarName, [string]$altEnvVarName, [string]$fileKey, [int]$defaultPort, [string]$envFilePath) {
+    $val = [Environment]::GetEnvironmentVariable($envVarName)
+    if (-not [string]::IsNullOrWhiteSpace($val)) { return [int]$val }
+    if ($altEnvVarName) {
+        $altVal = [Environment]::GetEnvironmentVariable($altEnvVarName)
+        if (-not [string]::IsNullOrWhiteSpace($altVal)) { return [int]$altVal }
+    }
+    if (Test-Path $envFilePath) {
+        $map = Get-EnvMap $envFilePath
+        if ($map.ContainsKey($fileKey) -and -not [string]::IsNullOrWhiteSpace($map[$fileKey])) {
+            return [int]$map[$fileKey]
+        }
+    }
+    return $defaultPort
+}
+
 if (-not (Test-Path "docker-compose.yml") -or -not (Test-Path ".env.example")) {
     Write-Error "Required project files docker-compose.yml and .env.example not found in $repoRoot"
     exit 1
 }
 
-if (Test-IsPortOccupied 3000) {
-    Write-Error "Required application port 3000 is already in use by another local process. Please free port 3000 or set FRONTEND_PORT before running setup."
+$envPath = Join-Path $repoRoot ".env"
+$envExamplePath = Join-Path $repoRoot ".env.example"
+
+if (-not (Test-Path $envPath)) {
+    if (Test-Path $envExamplePath) {
+        Copy-Item $envExamplePath $envPath
+        Write-Host "Created .env from .env.example" -ForegroundColor Green
+    }
+}
+
+$frontendPort = Get-ConfiguredPort "FRONTEND_PORT" $null "FRONTEND_PORT" 3000 $envPath
+$apiPort = Get-ConfiguredPort "API_PORT" "BACKEND_PORT" "API_PORT" 8000 $envPath
+
+$env:FRONTEND_PORT = "$frontendPort"
+$env:API_PORT = "$apiPort"
+
+if (Test-IsPortOccupied $frontendPort) {
+    Write-Error "Required application port $frontendPort is already in use by another local process. Please free port $frontendPort or set FRONTEND_PORT before running setup."
     exit 1
 }
 
-if (Test-IsPortOccupied 8000) {
-    Write-Error "Required application port 8000 is already in use by another local process. Please free port 8000 or set API_PORT before running setup."
+if (Test-IsPortOccupied $apiPort) {
+    Write-Error "Required application port $apiPort is already in use by another local process. Please free port $apiPort or set API_PORT before running setup."
     exit 1
 }
 
@@ -243,13 +275,13 @@ $frontendReady = $false
 while (((Get-Date) - $startTime).TotalSeconds -lt $timeoutSeconds) {
     try {
         if (-not $backendReady) {
-            $res = Invoke-RestMethod -Uri "http://localhost:8000/api/health/ready" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
+            $res = Invoke-RestMethod -Uri "http://localhost:${apiPort}/api/health/ready" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
             if ($res -and $res.status -eq "ready") {
                 $backendReady = $true
             }
         }
         if (-not $frontendReady) {
-            $fRes = Invoke-RestMethod -Uri "http://localhost:3000/api/health" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
+            $fRes = Invoke-RestMethod -Uri "http://localhost:${frontendPort}/api/health" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
             if ($fRes -and $fRes.status -eq "ok") {
                 $frontendReady = $true
             }
@@ -297,7 +329,7 @@ if ($execCode -ne 0) {
 # Stage 7: Verifying login readiness
 Write-Host "[Stage 7/7] Verifying login readiness..." -ForegroundColor Cyan
 try {
-    $meCheck = Invoke-RestMethod -Uri "http://localhost:8000/api/health/live" -Method Get -TimeoutSec 3
+    $meCheck = Invoke-RestMethod -Uri "http://localhost:${apiPort}/api/health/live" -Method Get -TimeoutSec 3
 } catch {
     Write-Error "API liveness check failed after bootstrap."
     exit 1
@@ -307,8 +339,8 @@ Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Green
 Write-Host "INSTRUCTOR EVALUATION WORKSPACE READY" -ForegroundColor Green
 Write-Host "======================================================================" -ForegroundColor Green
-Write-Host "Application URL:         http://localhost:3000"
-Write-Host "API Documentation URL:   http://localhost:8000/docs"
+Write-Host "Application URL:         http://localhost:$frontendPort"
+Write-Host "API Documentation URL:   http://localhost:${apiPort}/docs"
 Write-Host "Tenant Code:             $TenantCode"
 Write-Host "Administrator Email:     $AdminEmail"
 Write-Host "Administrator Full Name: $AdminFullName"
