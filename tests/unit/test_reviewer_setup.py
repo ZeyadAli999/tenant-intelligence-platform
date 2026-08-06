@@ -158,3 +158,25 @@ def test_readme_public_naming_and_instructor_content():
     assert r".\scripts\reviewer-setup.ps1" in readme_content
     assert "instructor-review" in readme_content
     assert "instructor@demo.example" in readme_content
+
+
+def test_postgres_port_conflict_prevention_and_internal_endpoint():
+    """Verify postgres host port uses POSTGRES_HOST_PORT:-55432 while internal services use postgres:5432."""
+    compose_path = ROOT_DIR / "docker-compose.yml"
+    compose_content = compose_path.read_text(encoding="utf-8")
+
+    # Host port mapping does not collide with host PostgreSQL on 5432
+    assert "${POSTGRES_HOST_PORT:-55432}:5432" in compose_content
+    assert '"${POSTGRES_PORT:-5432}:5432"' not in compose_content
+
+    # Internal services connect using container DNS postgres:5432
+    assert "@postgres:5432" in compose_content
+
+    # Setup scripts contain early application port conflict checks
+    ps_content = PS_SCRIPT.read_text(encoding="utf-8")
+    sh_content = SH_SCRIPT.read_text(encoding="utf-8")
+
+    assert "Test-IsPortOccupied 3000" in ps_content
+    assert "Test-IsPortOccupied 8000" in ps_content
+    assert "is_port_occupied 3000" in sh_content
+    assert "is_port_occupied 8000" in sh_content

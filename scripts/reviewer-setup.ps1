@@ -109,8 +109,29 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+function Test-IsPortOccupied([int]$port) {
+    try {
+        $con = New-Object System.Net.Sockets.TcpClient
+        $con.Connect("127.0.0.1", $port)
+        $con.Close()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 if (-not (Test-Path "docker-compose.yml") -or -not (Test-Path ".env.example")) {
     Write-Error "Required project files docker-compose.yml and .env.example not found in $repoRoot"
+    exit 1
+}
+
+if (Test-IsPortOccupied 3000) {
+    Write-Error "Required application port 3000 is already in use by another local process. Please free port 3000 or set FRONTEND_PORT before running setup."
+    exit 1
+}
+
+if (Test-IsPortOccupied 8000) {
+    Write-Error "Required application port 8000 is already in use by another local process. Please free port 8000 or set API_PORT before running setup."
     exit 1
 }
 

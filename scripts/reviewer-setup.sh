@@ -87,6 +87,27 @@ if [ ! -f "docker-compose.yml" ] || [ ! -f ".env.example" ]; then
   exit 1
 fi
 
+is_port_occupied() {
+  local port="$1"
+  if command -v nc >/dev/null 2>&1; then
+    nc -z 127.0.0.1 "$port" >/dev/null 2>&1
+  elif command -v lsof >/dev/null 2>&1; then
+    lsof -i ":$port" >/dev/null 2>&1
+  else
+    (echo > "/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
+  fi
+}
+
+if is_port_occupied 3000; then
+  echo "Error: Required application port 3000 is already in use by another process. Please free port 3000 or set FRONTEND_PORT before running setup." >&2
+  exit 1
+fi
+
+if is_port_occupied 8000; then
+  echo "Error: Required application port 8000 is already in use by another process. Please free port 8000 or set API_PORT before running setup." >&2
+  exit 1
+fi
+
 # Stage 2: Preparing configuration
 echo "[Stage 2/7] Preparing configuration..."
 ENV_PATH="$REPO_ROOT/.env"
