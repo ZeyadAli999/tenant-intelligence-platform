@@ -16,7 +16,7 @@
 
 The assigned instructor has two valid options:
 - **Option 1:** Create and use a personal free Groq API key from [https://console.groq.com/keys](https://console.groq.com/keys).
-- **Option 2:** To avoid account creation or if any external issue occurs, use the dedicated instructor-only Groq API key supplied in the private document **`00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS`**.
+- **Option 2:** To avoid account creation or if any external issue occurs, use the dedicated instructor-only Groq API key supplied in the private document **`00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS`**, located inside the same Google Drive folder whose link was submitted separately through the Google Form together with the certificates.
 
 ### Quick Setup Steps for the Instructor
 
