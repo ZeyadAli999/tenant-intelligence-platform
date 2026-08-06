@@ -215,6 +215,26 @@ if is_placeholder "$MASK_KEY" || [ "${#MASK_KEY}" -lt 32 ]; then
   echo "Generated secure RESULT_MASKING_KEY"
 fi
 
+MINIO_ROOT_USER="$(get_env_var "$ENV_PATH" "MINIO_ROOT_USER")"
+if is_placeholder "$MINIO_ROOT_USER" || [ -z "$MINIO_ROOT_USER" ] || [ "${#MINIO_ROOT_USER}" -lt 8 ]; then
+  set_env_var "$ENV_PATH" "MINIO_ROOT_USER" "local-minio-root-user"
+fi
+
+MINIO_ROOT_PASSWORD="$(get_env_var "$ENV_PATH" "MINIO_ROOT_PASSWORD")"
+if is_placeholder "$MINIO_ROOT_PASSWORD" || [ -z "$MINIO_ROOT_PASSWORD" ] || [ "${#MINIO_ROOT_PASSWORD}" -lt 8 ]; then
+  set_env_var "$ENV_PATH" "MINIO_ROOT_PASSWORD" "local-minio-root-password-32-bytes"
+fi
+
+MINIO_APP_ACCESS_KEY="$(get_env_var "$ENV_PATH" "MINIO_APP_ACCESS_KEY")"
+if is_placeholder "$MINIO_APP_ACCESS_KEY" || [ -z "$MINIO_APP_ACCESS_KEY" ] || [ "${#MINIO_APP_ACCESS_KEY}" -lt 8 ]; then
+  set_env_var "$ENV_PATH" "MINIO_APP_ACCESS_KEY" "local-minio-app-user"
+fi
+
+MINIO_APP_SECRET_KEY="$(get_env_var "$ENV_PATH" "MINIO_APP_SECRET_KEY")"
+if is_placeholder "$MINIO_APP_SECRET_KEY" || [ -z "$MINIO_APP_SECRET_KEY" ] || [ "${#MINIO_APP_SECRET_KEY}" -lt 8 ]; then
+  set_env_var "$ENV_PATH" "MINIO_APP_SECRET_KEY" "local-minio-app-password-32-bytes"
+fi
+
 CURRENT_GROQ="$(get_env_var "$ENV_PATH" "GROQ_API_KEY")"
 if [ -n "$GROQ_API_KEY" ]; then
   set_env_var "$ENV_PATH" "GROQ_API_KEY" "$GROQ_API_KEY"
@@ -296,10 +316,10 @@ done
 
 if [ "$BACKEND_READY" -ne 1 ] || [ "$FRONTEND_READY" -ne 1 ]; then
   echo "Error: Services did not report ready within $TIMEOUT seconds." >&2
-  echo "Diagnostic commands:" >&2
-  echo "  docker compose logs api" >&2
-  echo "  docker compose logs frontend" >&2
-  echo "  docker compose ps" >&2
+  echo "Collecting safe diagnostic evidence..." >&2
+  echo "Failed Service: api" >&2
+  echo "Safe API Error Reason:" >&2
+  docker compose logs --no-color --tail=100 api 2>&1 | grep -iE "ValidationError|Error|Exception|failed|Value error" | tail -n 5 | sed 's/^/  /' >&2
   exit 1
 fi
 

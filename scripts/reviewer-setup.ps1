@@ -241,6 +241,24 @@ if (Test-IsPlaceholder $maskKey -or ($maskKey -and $maskKey.Length -lt 32)) {
     Write-Host "Generated secure RESULT_MASKING_KEY" -ForegroundColor Green
 }
 
+# Ensure MinIO object-storage credentials are non-placeholder values
+$minioUser = $envMap["MINIO_ROOT_USER"]
+if (Test-IsPlaceholder $minioUser -or (-not $minioUser) -or $minioUser.Length -lt 8) {
+    Set-EnvVariable $envPath "MINIO_ROOT_USER" "local-minio-root-user"
+}
+$minioPass = $envMap["MINIO_ROOT_PASSWORD"]
+if (Test-IsPlaceholder $minioPass -or (-not $minioPass) -or $minioPass.Length -lt 8) {
+    Set-EnvVariable $envPath "MINIO_ROOT_PASSWORD" "local-minio-root-password-32-bytes"
+}
+$minioKey = $envMap["MINIO_APP_ACCESS_KEY"]
+if (Test-IsPlaceholder $minioKey -or (-not $minioKey) -or $minioKey.Length -lt 8) {
+    Set-EnvVariable $envPath "MINIO_APP_ACCESS_KEY" "local-minio-app-user"
+}
+$minioSecret = $envMap["MINIO_APP_SECRET_KEY"]
+if (Test-IsPlaceholder $minioSecret -or (-not $minioSecret) -or $minioSecret.Length -lt 8) {
+    Set-EnvVariable $envPath "MINIO_APP_SECRET_KEY" "local-minio-app-password-32-bytes"
+}
+
 # Reload env map after auto-generations
 $envMap = Get-EnvMap $envPath
 
@@ -334,10 +352,14 @@ while (((Get-Date) - $startTime).TotalSeconds -lt $timeoutSeconds) {
 
 if (-not $backendReady -or -not $frontendReady) {
     Write-Host "Services did not report ready within $timeoutSeconds seconds." -ForegroundColor Red
-    Write-Host "Diagnostic commands:" -ForegroundColor Yellow
-    Write-Host "  docker compose logs api"
-    Write-Host "  docker compose logs frontend"
-    Write-Host "  docker compose ps"
+    Write-Host "Collecting safe diagnostic evidence..." -ForegroundColor Yellow
+    Write-Host "Failed Service: api" -ForegroundColor Red
+    $apiLogs = & docker compose logs --no-color --tail=100 api 2>&1
+    $safeReasons = $apiLogs | Select-String -Pattern "ValidationError|Error|Exception|failed|Value error" | Select-Object -Last 5
+    if ($safeReasons) {
+        Write-Host "Safe API Error Reason:" -ForegroundColor Red
+        $safeReasons | ForEach-Object { Write-Host "  $($_.Line.Trim())" -ForegroundColor Yellow }
+    }
     exit 1
 }
 

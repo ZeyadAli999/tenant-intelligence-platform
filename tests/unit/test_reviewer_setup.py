@@ -303,3 +303,36 @@ def test_all_docker_compose_ports_handled_by_automatic_resolver():
         assert var_name in sh_content, (
             f"Variable {var_name} missing from Bash setup script"
         )
+
+
+def test_api_internal_health_check_and_minio_credentials_sanitization():
+    """Verify API container healthcheck uses internal port 8000 and MinIO credentials are non-placeholder."""
+    compose_path = ROOT_DIR / "docker-compose.yml"
+    compose_content = compose_path.read_text(encoding="utf-8")
+
+    # API healthcheck uses internal container port 8000 and matching /api/health/ready route
+    assert "http://localhost:8000/api/health/ready" in compose_content
+
+    # .env.example contains valid non-placeholder MinIO credentials
+    env_example_path = ROOT_DIR / ".env.example"
+    env_example = env_example_path.read_text(encoding="utf-8")
+    for key in [
+        "MINIO_ROOT_USER=",
+        "MINIO_ROOT_PASSWORD=",
+        "MINIO_APP_ACCESS_KEY=",
+        "MINIO_APP_SECRET_KEY=",
+    ]:
+        assert f"{key}replace-" not in env_example
+
+    # Setup scripts contain automatic MinIO credential sanitization logic
+    ps_content = PS_SCRIPT.read_text(encoding="utf-8")
+    sh_content = SH_SCRIPT.read_text(encoding="utf-8")
+
+    assert "MINIO_ROOT_USER" in ps_content
+    assert "MINIO_ROOT_PASSWORD" in ps_content
+    assert "MINIO_APP_ACCESS_KEY" in ps_content
+    assert "MINIO_APP_SECRET_KEY" in ps_content
+    assert "MINIO_ROOT_USER" in sh_content
+    assert "MINIO_ROOT_PASSWORD" in sh_content
+    assert "MINIO_APP_ACCESS_KEY" in sh_content
+    assert "MINIO_APP_SECRET_KEY" in sh_content
