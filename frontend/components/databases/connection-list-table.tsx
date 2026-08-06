@@ -51,8 +51,7 @@ export function ConnectionListTable({
         </thead>
         <tbody className="divide-y divide-[var(--border)]">
           {connections.map((conn) => {
-            const isHealthy =
-              conn.status === "healthy" || conn.status === "active";
+            const isConnected = conn.status === "connected";
             const isFailed = conn.status === "failed";
 
             return (
@@ -86,7 +85,7 @@ export function ConnectionListTable({
                 <td className="py-4 px-4">
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      isHealthy
+                      isConnected
                         ? "bg-emerald-500/10 text-emerald-600"
                         : isFailed
                           ? "bg-red-500/10 text-red-600"
@@ -95,7 +94,7 @@ export function ConnectionListTable({
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        isHealthy
+                        isConnected
                           ? "bg-emerald-500"
                           : isFailed
                             ? "bg-red-500"

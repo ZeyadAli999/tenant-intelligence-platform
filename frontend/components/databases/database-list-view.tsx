@@ -21,6 +21,7 @@ import {
   ConnectionTestResponse,
   DatabaseConnectionCreateInput,
   DatabaseConnectionResponse,
+  DatabaseConnectionUpdateInput,
   SchemaSyncResponse,
 } from "@/lib/database-contracts";
 
@@ -100,12 +101,16 @@ export function DatabaseListView({
     };
   }, []);
 
-  const handleCreate = async (input: DatabaseConnectionCreateInput) => {
-    await createDatabaseConnection(input);
+  const handleCreate = async (
+    input: DatabaseConnectionCreateInput | DatabaseConnectionUpdateInput,
+  ) => {
+    await createDatabaseConnection(input as DatabaseConnectionCreateInput);
     await loadConnections();
   };
 
-  const handleUpdate = async (input: DatabaseConnectionCreateInput) => {
+  const handleUpdate = async (
+    input: DatabaseConnectionCreateInput | DatabaseConnectionUpdateInput,
+  ) => {
     if (!connToEdit) return;
     await updateDatabaseConnection(connToEdit.id, input);
     setConnToEdit(null);

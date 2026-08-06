@@ -7,12 +7,15 @@ import { Input } from "@/components/ui/input";
 import {
   DatabaseConnectionCreateInput,
   DatabaseConnectionResponse,
+  DatabaseConnectionUpdateInput,
 } from "@/lib/database-contracts";
 
 interface DatabaseModalProps {
   isOpen: boolean;
   connectionToEdit?: DatabaseConnectionResponse | null;
-  onSubmit: (data: DatabaseConnectionCreateInput) => Promise<void>;
+  onSubmit: (
+    data: DatabaseConnectionCreateInput | DatabaseConnectionUpdateInput,
+  ) => Promise<void>;
   onClose: () => void;
 }
 
@@ -105,20 +108,40 @@ export function DatabaseModal({
 
     setIsSubmitting(true);
     try {
-      const payload: DatabaseConnectionCreateInput = {
-        name: name.trim(),
-        database_type: databaseType.trim(),
-        host: host.trim(),
-        port: Number(port),
-        database_name: databaseName.trim(),
-        username: username.trim(),
-        password: password, // Will be sent via HTTPS body and cleared immediately
-        ssl_enabled: sslEnabled,
-        ssl_settings: { mode: "verify-full" },
-        connection_options: { application_name: applicationName.trim() },
-      };
+      if (isEditing) {
+        const payload: DatabaseConnectionUpdateInput = {
+          name: name.trim(),
+          database_type: databaseType.trim(),
+          host: host.trim(),
+          port: Number(port),
+          database_name: databaseName.trim(),
+          username: username.trim(),
+          ssl_enabled: sslEnabled,
+          ssl_settings: { mode: "verify-full" },
+          connection_options: { application_name: applicationName.trim() },
+        };
 
-      await onSubmit(payload);
+        if (password.trim().length > 0) {
+          payload.password = password;
+        }
+
+        await onSubmit(payload);
+      } else {
+        const payload: DatabaseConnectionCreateInput = {
+          name: name.trim(),
+          database_type: databaseType.trim(),
+          host: host.trim(),
+          port: Number(port),
+          database_name: databaseName.trim(),
+          username: username.trim(),
+          password: password, // Will be sent via HTTPS body and cleared immediately
+          ssl_enabled: sslEnabled,
+          ssl_settings: { mode: "verify-full" },
+          connection_options: { application_name: applicationName.trim() },
+        };
+
+        await onSubmit(payload);
+      }
       setPassword(""); // Clear password from memory immediately
       onClose();
     } catch (err: unknown) {

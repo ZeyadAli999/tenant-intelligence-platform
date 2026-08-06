@@ -19,6 +19,7 @@ import {
   ConnectionTestResponse,
   DatabaseConnectionCreateInput,
   DatabaseConnectionResponse,
+  DatabaseConnectionUpdateInput,
   SchemaSyncResponse,
 } from "@/lib/database-contracts";
 
@@ -91,7 +92,9 @@ export function DatabaseDetailView({
     };
   }, [connectionId]);
 
-  const handleUpdate = async (input: DatabaseConnectionCreateInput) => {
+  const handleUpdate = async (
+    input: DatabaseConnectionCreateInput | DatabaseConnectionUpdateInput,
+  ) => {
     if (!connection) return;
     await updateDatabaseConnection(connection.id, input);
     await loadConnection();
@@ -155,8 +158,7 @@ export function DatabaseDetailView({
     );
   }
 
-  const isHealthy =
-    connection.status === "healthy" || connection.status === "active";
+  const isConnected = connection.status === "connected";
   const isFailed = connection.status === "failed";
 
   return (
@@ -178,7 +180,7 @@ export function DatabaseDetailView({
               </h1>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  isHealthy
+                  isConnected
                     ? "bg-emerald-500/10 text-emerald-600"
                     : isFailed
                       ? "bg-red-500/10 text-red-600"
@@ -187,7 +189,7 @@ export function DatabaseDetailView({
               >
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
-                    isHealthy
+                    isConnected
                       ? "bg-emerald-500"
                       : isFailed
                         ? "bg-red-500"

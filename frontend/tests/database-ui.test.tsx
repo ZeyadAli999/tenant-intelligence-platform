@@ -4,7 +4,11 @@ import { DatabaseModal } from "@/components/databases/database-modal";
 import { ConnectionListTable } from "@/components/databases/connection-list-table";
 import { ConnectionTestModal } from "@/components/databases/connection-test-modal";
 import { SchemaSyncModal } from "@/components/databases/schema-sync-modal";
-import { DatabaseConnectionResponse } from "@/lib/database-contracts";
+import {
+  DatabaseConnectionCreateInput,
+  DatabaseConnectionResponse,
+  DatabaseConnectionUpdateInput,
+} from "@/lib/database-contracts";
 
 describe("Phase 5D Database UI Components", () => {
   test("DatabaseModal validates required fields and masks password", async () => {
@@ -64,10 +68,10 @@ describe("Phase 5D Database UI Components", () => {
       database_name: "analytics_db",
       username: "analytics_reader",
       ssl_enabled: true,
-      status: "healthy",
+      status: "connected",
       last_tested_at: new Date().toISOString(),
       last_test_message: "Connection test succeeded",
-      schema_sync_status: "synced",
+      schema_sync_status: "succeeded",
       last_schema_sync_at: new Date().toISOString(),
       is_active: true,
       created_at: new Date().toISOString(),
@@ -87,7 +91,7 @@ describe("Phase 5D Database UI Components", () => {
     );
 
     expect(screen.getByText("Analytics PostgreSQL")).toBeInTheDocument();
-    expect(screen.getByText("healthy")).toBeInTheDocument();
+    expect(screen.getByText("connected")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Edit" }),
     ).not.toBeInTheDocument();
@@ -118,7 +122,7 @@ describe("Phase 5D Database UI Components", () => {
         isLoading={false}
         testResult={{
           success: true,
-          status: "healthy",
+          status: "connected",
           error_code: null,
           message: "Successfully connected to PostgreSQL 16",
           tested_at: new Date().toISOString(),
@@ -147,5 +151,86 @@ describe("Phase 5D Database UI Components", () => {
     expect(
       screen.getByText(/This operation reads metadata only and will/i),
     ).toBeInTheDocument();
+  });
+
+  test("DatabaseModal in edit mode omits blank password and includes nonblank password", async () => {
+    let capturedPayload: Record<string, unknown> | null = null;
+    const onSubmit = vi.fn(async (data: Record<string, unknown>) => {
+      capturedPayload = data;
+    });
+    const onClose = vi.fn();
+
+    const mockConn: DatabaseConnectionResponse = {
+      id: "11111111-1111-4111-8111-111111111111",
+      name: "Existing DB",
+      database_type: "postgresql",
+      host: "db.example.com",
+      port: 5432,
+      database_name: "testdb",
+      username: "dbuser",
+      ssl_enabled: true,
+      status: "connected",
+      last_tested_at: null,
+      last_test_message: null,
+      schema_sync_status: "succeeded",
+      last_schema_sync_at: null,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    render(
+      <DatabaseModal
+        isOpen={true}
+        connectionToEdit={mockConn}
+        onSubmit={
+          onSubmit as unknown as (
+            data: DatabaseConnectionCreateInput | DatabaseConnectionUpdateInput,
+          ) => Promise<void>
+        }
+        onClose={onClose}
+      />,
+    );
+
+    const passwordInput = screen.getByLabelText(
+      /^Password/i,
+    ) as HTMLInputElement;
+    expect(passwordInput.value).toBe("");
+
+    const submitBtn = screen.getByRole("button", { name: "Update Connection" });
+    fireEvent.click(submitBtn);
+
+    await vi.waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+    });
+
+    expect(capturedPayload).toEqual(
+      expect.objectContaining({
+        name: "Existing DB",
+        database_type: "postgresql",
+        host: "db.example.com",
+        port: 5432,
+        database_name: "testdb",
+        username: "dbuser",
+      }),
+    );
+    expect(capturedPayload).not.toHaveProperty("password");
+
+    onSubmit.mockClear();
+    capturedPayload = null;
+
+    fireEvent.change(passwordInput, { target: { value: "newsecret123" } });
+    fireEvent.click(submitBtn);
+
+    await vi.waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+    });
+
+    expect(capturedPayload).toEqual(
+      expect.objectContaining({
+        name: "Existing DB",
+        password: "newsecret123",
+      }),
+    );
   });
 });

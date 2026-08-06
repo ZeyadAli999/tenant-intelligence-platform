@@ -15,6 +15,11 @@ def test_portable_zip_has_safe_posix_paths(tmp_path) -> None:
     (root / "services/documents").mkdir(parents=True)
     (root / "workers").mkdir()
     (root / "frontend/app/login").mkdir(parents=True)
+    (root / "frontend/app/(authenticated)/databases").mkdir(parents=True)
+    (root / "frontend/app/api/backend/[...path]").mkdir(parents=True)
+    (root / "frontend/components/databases").mkdir(parents=True)
+    (root / "frontend/lib").mkdir(parents=True)
+    (root / "frontend/tests").mkdir(parents=True)
     (root / "frontend/node_modules/pkg").mkdir(parents=True)
     (root / "frontend/.next/cache").mkdir(parents=True)
     (root / "outputs").mkdir()
@@ -29,7 +34,21 @@ def test_portable_zip_has_safe_posix_paths(tmp_path) -> None:
         "frontend/package.json",
         "frontend/package-lock.json",
         "frontend/app/login/page.tsx",
+        "frontend/app/(authenticated)/databases/page.tsx",
+        "frontend/app/api/backend/[...path]/route.ts",
+        "frontend/components/databases/database-workspace.tsx",
+        "frontend/components/databases/database-list-view.tsx",
+        "frontend/components/databases/database-detail-view.tsx",
+        "frontend/components/databases/database-modal.tsx",
+        "frontend/components/databases/connection-list-table.tsx",
+        "frontend/components/databases/schema-table-explorer.tsx",
+        "frontend/lib/database-api.ts",
+        "frontend/lib/database-contracts.ts",
+        "frontend/tests/database-phase5d.test.ts",
+        "frontend/tests/database-ui.test.tsx",
         "README.md",
+        "SECURITY.md",
+        ".env.example",
     ):
         path = root / name
         path.write_text("safe", encoding="utf-8")

@@ -106,7 +106,21 @@ def verify_portable_zip(archive_path: Path) -> None:
             "frontend/package.json",
             "frontend/package-lock.json",
             "frontend/app/login/page.tsx",
+            "frontend/app/(authenticated)/databases/page.tsx",
+            "frontend/app/api/backend/[...path]/route.ts",
+            "frontend/components/databases/database-workspace.tsx",
+            "frontend/components/databases/database-list-view.tsx",
+            "frontend/components/databases/database-detail-view.tsx",
+            "frontend/components/databases/database-modal.tsx",
+            "frontend/components/databases/connection-list-table.tsx",
+            "frontend/components/databases/schema-table-explorer.tsx",
+            "frontend/lib/database-api.ts",
+            "frontend/lib/database-contracts.ts",
+            "frontend/tests/database-phase5d.test.ts",
+            "frontend/tests/database-ui.test.tsx",
             "README.md",
+            "SECURITY.md",
+            ".env.example",
         }
         if not required.issubset(names):
             raise ValueError("ZIP is missing the expected project tree")

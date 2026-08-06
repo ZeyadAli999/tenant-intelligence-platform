@@ -3,11 +3,12 @@
 ## Phase 5B chat workspace
 
 The Next.js frontend now includes the production-oriented Phase 5B Chat
-Workspace in `frontend/`. It provides persisted tenant-owned conversations,
+Workspace and Phase 5D Database Management surface in `frontend/`. It provides persisted tenant-owned conversations,
 immutable source selection, progressive SSE answers, cancellation, safe SQL
-inspection, database/document citations, usage metadata, and responsive
-conversation and evidence drawers. Knowledge, Databases, Permissions, and
-Settings remain honest structural previews for later frontend phases.
+inspection, database/document citations, usage metadata, responsive
+conversation and evidence drawers, and complete database connection management,
+schema discovery, schema exploration, table inspection, and permitted schema access.
+Permissions and Settings remain honest structural previews for later frontend phases.
 
 The browser never receives tokens in JavaScript-visible storage. Next.js Route
 Handlers proxy authentication to FastAPI and keep access and refresh tokens in
@@ -46,11 +47,11 @@ The frontend container reaches FastAPI at `http://api:8000` and exposes a health
 endpoint at `http://localhost:3000/api/health`.
 
 Routes are `/login`, `/dashboard`, `/chat`, `/knowledge`, `/databases`,
-`/permissions`, and `/settings`. Login, dashboard, and chat are functionally
-complete through Phase 5B. The remaining protected routes deliberately contain
+`/permissions`, and `/settings`. Login, dashboard, chat, knowledge, and databases are functionally
+complete through Phase 5D. The remaining protected routes deliberately contain
 no mock business data.
 
-### Frontend capabilities through Phase 5B
+### Frontend capabilities through Phase 5D
 
 The product interface now uses a consistent Tenant Intelligence identity,
 two-column desktop sign-in composition, real platform-readiness display,
@@ -60,6 +61,10 @@ areas, verified security controls, and getting-started path. Chat adds a
 three-pane desktop workspace, mobile conversation/evidence sheets, source-aware
 conversation creation, keyboard-safe composition, ordered incremental SSE
 parsing, persisted-history reconciliation, and explicit failed/cancelled states.
+Databases adds connection listing, connection creation (requiring password),
+connection editing (omitting blank password to preserve existing secret), connection deletion,
+SSRF-resistant connection testing, schema synchronization, schema exploration, table inspection,
+and allowed-schema inspection workflows for tenant administrators.
 Assistant text is rendered as plain text; raw HTML, prompts, tokens, credentials,
 and unvalidated provider data are never rendered. Responsive and Axe checks
 cover desktop, tablet, and mobile layouts in both light and dark themes.
