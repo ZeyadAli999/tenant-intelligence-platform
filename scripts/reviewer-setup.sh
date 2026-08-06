@@ -168,10 +168,23 @@ FRONTEND_PORT="$(resolve_available_host_port "Frontend" "$REQ_FRONTEND_PORT")"
 REQ_API_PORT="$(get_requested_port "API_PORT" "BACKEND_PORT" "API_PORT" "8000")"
 API_PORT="$(resolve_available_host_port "API" "$REQ_API_PORT")"
 
-REQ_POSTGRES_HOST_PORT="$(get_requested_port "POSTGRES_HOST_PORT" "" "POSTGRES_HOST_PORT" "55432")"
+REQ_POSTGRES_HOST_PORT="$(get_requested_port "POSTGRES_HOST_PORT" "POSTGRES_PORT" "POSTGRES_HOST_PORT" "55432")"
 POSTGRES_HOST_PORT="$(resolve_available_host_port "PostgreSQL" "$REQ_POSTGRES_HOST_PORT")"
 
-export FRONTEND_PORT API_PORT POSTGRES_HOST_PORT
+REQ_MINIO_CONSOLE_HOST_PORT="$(get_requested_port "MINIO_CONSOLE_HOST_PORT" "MINIO_CONSOLE_PORT" "MINIO_CONSOLE_HOST_PORT" "9001")"
+MINIO_CONSOLE_HOST_PORT="$(resolve_available_host_port "MinIO Console" "$REQ_MINIO_CONSOLE_HOST_PORT")"
+MINIO_CONSOLE_PORT="$MINIO_CONSOLE_HOST_PORT"
+
+BACKEND_PORT="$API_PORT"
+POSTGRES_PORT="$POSTGRES_HOST_PORT"
+
+export FRONTEND_PORT API_PORT BACKEND_PORT POSTGRES_HOST_PORT POSTGRES_PORT MINIO_CONSOLE_HOST_PORT MINIO_CONSOLE_PORT
+
+echo "Host Port Summary:"
+echo "  Frontend:          $FRONTEND_PORT"
+echo "  API:               $API_PORT"
+echo "  PostgreSQL:        $POSTGRES_HOST_PORT"
+echo "  MinIO Console:     $MINIO_CONSOLE_HOST_PORT"
 
 # Stage 2: Preparing configuration
 echo "[Stage 2/7] Preparing configuration..."
@@ -325,6 +338,7 @@ echo "Frontend URL:            http://localhost:${FRONTEND_PORT}"
 echo "API URL:                 http://localhost:${API_PORT}"
 echo "API Documentation URL:   http://localhost:${API_PORT}/docs"
 echo "Health URL:              http://localhost:${API_PORT}/api/health/ready"
+echo "MinIO Console URL:       http://localhost:${MINIO_CONSOLE_HOST_PORT}"
 echo "Tenant Code:             $TENANT_CODE"
 echo "Administrator Email:     $ADMIN_EMAIL"
 echo "Administrator Full Name: $ADMIN_FULL_NAME"

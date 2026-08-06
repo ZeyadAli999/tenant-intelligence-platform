@@ -185,12 +185,25 @@ $frontendPort = Resolve-AvailableHostPort "Frontend" $reqFrontendPort
 $reqApiPort = Get-RequestedPort "API_PORT" "BACKEND_PORT" "API_PORT" 8000 $envPath
 $apiPort = Resolve-AvailableHostPort "API" $reqApiPort
 
-$reqPostgresPort = Get-RequestedPort "POSTGRES_HOST_PORT" $null "POSTGRES_HOST_PORT" 55432 $envPath
+$reqPostgresPort = Get-RequestedPort "POSTGRES_HOST_PORT" "POSTGRES_PORT" "POSTGRES_HOST_PORT" 55432 $envPath
 $postgresHostPort = Resolve-AvailableHostPort "PostgreSQL" $reqPostgresPort
+
+$reqMinioPort = Get-RequestedPort "MINIO_CONSOLE_HOST_PORT" "MINIO_CONSOLE_PORT" "MINIO_CONSOLE_HOST_PORT" 9001 $envPath
+$minioConsolePort = Resolve-AvailableHostPort "MinIO Console" $reqMinioPort
 
 $env:FRONTEND_PORT = "$frontendPort"
 $env:API_PORT = "$apiPort"
+$env:BACKEND_PORT = "$apiPort"
 $env:POSTGRES_HOST_PORT = "$postgresHostPort"
+$env:POSTGRES_PORT = "$postgresHostPort"
+$env:MINIO_CONSOLE_HOST_PORT = "$minioConsolePort"
+$env:MINIO_CONSOLE_PORT = "$minioConsolePort"
+
+Write-Host "Host Port Summary:" -ForegroundColor Cyan
+Write-Host "  Frontend:          $frontendPort" -ForegroundColor Green
+Write-Host "  API:               $apiPort" -ForegroundColor Green
+Write-Host "  PostgreSQL:        $postgresHostPort" -ForegroundColor Green
+Write-Host "  MinIO Console:     $minioConsolePort" -ForegroundColor Green
 
 # Stage 2: Preparing configuration
 Write-Host "[Stage 2/7] Preparing configuration..." -ForegroundColor Cyan
@@ -368,6 +381,7 @@ Write-Host "Frontend URL:            http://localhost:$frontendPort"
 Write-Host "API URL:                 http://localhost:$apiPort"
 Write-Host "API Documentation URL:   http://localhost:${apiPort}/docs"
 Write-Host "Health URL:              http://localhost:${apiPort}/api/health/ready"
+Write-Host "MinIO Console URL:       http://localhost:$minioConsolePort"
 Write-Host "Tenant Code:             $TenantCode"
 Write-Host "Administrator Email:     $AdminEmail"
 Write-Host "Administrator Full Name: $AdminFullName"

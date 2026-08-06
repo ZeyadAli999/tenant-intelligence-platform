@@ -42,7 +42,7 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${MINIO_CONSOLE_HOST_PORT:-${MINIO_CONSOLE_PORT:-9001}}:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s

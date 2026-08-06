@@ -204,7 +204,8 @@ def test_scripts_respect_environment_port_overrides_and_auto_resolution():
     assert "Invalid $label host port" in sh_content
     assert "[Warning] $label host port $req_port is already in use." in sh_content
     assert "[Resolution] Automatically selected $label host port $p." in sh_content
-    assert "export FRONTEND_PORT API_PORT POSTGRES_HOST_PORT" in sh_content
+    assert "export FRONTEND_PORT API_PORT" in sh_content
+    assert "MINIO_CONSOLE_HOST_PORT" in sh_content
 
     # Bash summary URLs
     assert 'Frontend URL:            http://localhost:${FRONTEND_PORT}' in sh_content
@@ -238,3 +239,67 @@ def test_minio_init_idempotency_and_bounded_readiness_retry():
     destructive = ["mc rb", "mc rm", "docker volume rm"]
     for cmd in destructive:
         assert cmd not in compose_content
+
+
+def test_all_docker_compose_ports_handled_by_automatic_resolver():
+    """Verify that every ports: mapping in docker-compose.yml is controlled by the automatic resolver."""
+    compose_path = ROOT_DIR / "docker-compose.yml"
+    compose_content = compose_path.read_text(encoding="utf-8")
+
+    ps_content = PS_SCRIPT.read_text(encoding="utf-8")
+    sh_content = SH_SCRIPT.read_text(encoding="utf-8")
+
+    # Find all published host port lines in docker-compose.yml
+    lines = compose_content.splitlines()
+    in_ports_block = False
+    published_port_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "ports:":
+            in_ports_block = True
+            continue
+        if in_ports_block:
+            if stripped.startswith("- "):
+                published_port_lines.append(stripped)
+            else:
+                in_ports_block = False
+
+    assert len(published_port_lines) > 0, "No ports: mappings found in docker-compose.yml"
+
+    # Registered resolver environment variables
+    allowed_vars = {
+        "FRONTEND_PORT",
+        "API_PORT",
+        "POSTGRES_HOST_PORT",
+        "MINIO_CONSOLE_HOST_PORT",
+        "MINIO_CONSOLE_PORT",
+        "POSTGRES_PORT",
+        "BACKEND_PORT",
+    }
+
+    for port_line in published_port_lines:
+        # Every published port must use an environment variable on the host side
+        assert "${" in port_line, (
+            f"Fixed un-parameterized host port mapping found: '{port_line}'"
+        )
+
+        # Verify variable name is present in allowed_vars
+        has_var = any(var_name in port_line for var_name in allowed_vars)
+        assert has_var, (
+            f"Host port mapping '{port_line}' uses an unhandled variable name not in resolver inventory"
+        )
+
+    # Verify all host port variables are handled in setup scripts
+    for var_name in [
+        "FRONTEND_PORT",
+        "API_PORT",
+        "POSTGRES_HOST_PORT",
+        "MINIO_CONSOLE_HOST_PORT",
+    ]:
+        assert var_name in ps_content, (
+            f"Variable {var_name} missing from PowerShell setup script"
+        )
+        assert var_name in sh_content, (
+            f"Variable {var_name} missing from Bash setup script"
+        )
