@@ -222,10 +222,17 @@ def test_minio_init_idempotency_and_bounded_readiness_retry():
     assert "30" in compose_content
     assert "MinIO server at minio:9000 failed to respond" in compose_content
 
-    # Idempotency and safe bucket creation
+    # Idempotency and safe bucket/user/policy configuration without blanket error suppression
     assert "mc mb --ignore-existing" in compose_content
     assert "mc admin user add" in compose_content
     assert "mc admin policy attach" in compose_content
+    assert "MinIO initialization completed successfully." in compose_content
+    assert "|| true" not in compose_content
+
+    # Error handling and failure propagation
+    assert "Failed to create or confirm MinIO bucket" in compose_content
+    assert "Failed to create or update MinIO user" in compose_content
+    assert "Failed to attach policy to MinIO user" in compose_content
 
     # Destructive commands must not be present
     destructive = ["mc rb", "mc rm", "docker volume rm"]

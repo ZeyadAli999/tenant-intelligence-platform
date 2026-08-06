@@ -74,9 +74,10 @@ services:
           fi;
           sleep 1;
         done;
-        mc mb --ignore-existing "local/$${MINIO_BUCKET}" >/dev/null 2>&1 || true;
-        mc admin user add local "$${MINIO_APP_ACCESS_KEY}" "$${MINIO_APP_SECRET_KEY}" >/dev/null 2>&1 || true;
-        mc admin policy attach local readwrite --user "$${MINIO_APP_ACCESS_KEY}" >/dev/null 2>&1 || true;
+        mc mb --ignore-existing "local/$${MINIO_BUCKET}" >/dev/null 2>&1 || { echo "Error: Failed to create or confirm MinIO bucket." >&2; exit 1; };
+        mc admin user add local "$${MINIO_APP_ACCESS_KEY}" "$${MINIO_APP_SECRET_KEY}" >/dev/null 2>&1 || { echo "Error: Failed to create or update MinIO user." >&2; exit 1; };
+        mc admin policy attach local readwrite --user "$${MINIO_APP_ACCESS_KEY}" >/dev/null 2>&1 || { echo "Error: Failed to attach policy to MinIO user." >&2; exit 1; };
+        echo "MinIO initialization completed successfully.";
     restart: "no"
 
   embedding-cache-init:
