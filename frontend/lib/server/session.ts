@@ -57,8 +57,16 @@ async function refreshSession(): Promise<{
 
 export async function authenticatedFetch(path: string, init: RequestInit = {}) {
   const store = await cookies();
-  const access = store.get(ACCESS_COOKIE)?.value;
-  if (!access) return { upstream: null, refreshedTokens: null };
+  let access = store.get(ACCESS_COOKIE)?.value;
+  let refreshedTokens: unknown = null;
+
+  if (!access) {
+    const refreshed = await refreshSession();
+    if (!refreshed) return { upstream: null, refreshedTokens: null };
+    access = refreshed.access;
+    refreshedTokens = refreshed.tokens;
+  }
+
   const send = (token: string) =>
     fetch(backendUrl(path), {
       ...init,
@@ -66,12 +74,16 @@ export async function authenticatedFetch(path: string, init: RequestInit = {}) {
       cache: "no-store",
       signal: init.signal ?? AbortSignal.timeout(10_000),
     });
+
   let upstream = await send(access);
-  if (upstream.status !== 401) return { upstream, refreshedTokens: null };
-  const refreshed = await refreshSession();
-  if (!refreshed) return { upstream: null, refreshedTokens: null };
-  upstream = await send(refreshed.access);
-  return { upstream, refreshedTokens: refreshed.tokens };
+  if (upstream.status === 401 && !refreshedTokens) {
+    const refreshed = await refreshSession();
+    if (!refreshed) return { upstream: null, refreshedTokens: null };
+    upstream = await send(refreshed.access);
+    refreshedTokens = refreshed.tokens;
+  }
+
+  return { upstream, refreshedTokens };
 }
 
 function authorizedHeaders(source: HeadersInit | undefined, token: string) {

@@ -168,6 +168,56 @@ describe("login BFF", () => {
   });
 });
 
+describe("session authenticatedFetch behavior", () => {
+  beforeEach(() => {
+    vi.stubEnv("BACKEND_INTERNAL_URL", "http://backend.internal:8000");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  test("attempts refreshSession when access cookie is missing but refresh cookie exists", async () => {
+    const mockCookies = {
+      get: (name: string) =>
+        name === "ti_refresh" ? { value: "valid-refresh-token" } : undefined,
+    };
+    vi.mock("next/headers", () => ({
+      cookies: async () => mockCookies,
+    }));
+
+    const fetchMock = vi.fn(async (url: string | URL) => {
+      const urlStr = url.toString();
+      if (urlStr.endsWith("/api/auth/refresh")) {
+        return new Response(JSON.stringify(validTokens), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (urlStr.endsWith("/api/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            id: "user-1",
+            email: "user@example.com",
+            full_name: "Test User",
+            status: "active",
+            is_tenant_admin: true,
+            tenant: { id: "t-1", name: "Tenant", code: "tenant" },
+            roles: [],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { authenticatedFetch } = await import("@/lib/server/session");
+    const { upstream, refreshedTokens } = await authenticatedFetch("/api/auth/me");
+
+    expect(upstream).not.toBeNull();
+    expect(upstream?.status).toBe(200);
+    expect(refreshedTokens).toEqual(validTokens);
+  });
+});
+
 describe("backend URL construction", () => {
   afterEach(() => vi.unstubAllEnvs());
 
