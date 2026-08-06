@@ -88,7 +88,18 @@ if [ ! -f "$ENV_PATH" ] && [ -f "$REPO_ROOT/.env.example" ]; then
   echo "Created .env from .env.example"
 fi
 
-get_configured_port() {
+is_port_occupied() {
+  local port="$1"
+  if command -v nc >/dev/null 2>&1; then
+    nc -z 127.0.0.1 "$port" >/dev/null 2>&1
+  elif command -v lsof >/dev/null 2>&1; then
+    lsof -i ":$port" >/dev/null 2>&1
+  else
+    (echo > "/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
+  fi
+}
+
+get_requested_port() {
   local env_var="$1"
   local alt_var="$2"
   local file_key="$3"
@@ -111,30 +122,56 @@ get_configured_port() {
   echo "$default_port"
 }
 
-FRONTEND_PORT="$(get_configured_port "FRONTEND_PORT" "" "FRONTEND_PORT" "3000")"
-API_PORT="$(get_configured_port "API_PORT" "BACKEND_PORT" "API_PORT" "8000")"
-export FRONTEND_PORT API_PORT
+resolve_available_host_port() {
+  local label="$1"
+  local req_port="$2"
 
-is_port_occupied() {
-  local port="$1"
-  if command -v nc >/dev/null 2>&1; then
-    nc -z 127.0.0.1 "$port" >/dev/null 2>&1
-  elif command -v lsof >/dev/null 2>&1; then
-    lsof -i ":$port" >/dev/null 2>&1
-  else
-    (echo > "/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
+  case "$req_port" in
+    ''|*[!0-9]*)
+      echo "Error: Invalid $label host port '$req_port'. Port must be numeric." >&2
+      exit 1
+      ;;
+  esac
+
+  if [ "$req_port" -lt 1 ] || [ "$req_port" -gt 65535 ]; then
+    echo "Error: Invalid $label host port '$req_port'. Port must be between 1 and 65535." >&2
+    exit 1
   fi
+
+  if ! is_port_occupied "$req_port"; then
+    echo "$req_port"
+    return
+  fi
+
+  echo "[Warning] $label host port $req_port is already in use." >&2
+
+  local p=$((req_port + 1))
+  local max=$((req_port + 100))
+  if [ "$max" -gt 65535 ]; then max=65535; fi
+
+  while [ "$p" -le "$max" ]; do
+    if ! is_port_occupied "$p"; then
+      echo "[Resolution] Automatically selected $label host port $p." >&2
+      echo "$p"
+      return
+    fi
+    p=$((p + 1))
+  done
+
+  echo "Error: Could not find an available $label host port within 100 ports of $req_port." >&2
+  exit 1
 }
 
-if is_port_occupied "$FRONTEND_PORT"; then
-  echo "Error: Required application port $FRONTEND_PORT is already in use by another process. Please free port $FRONTEND_PORT or set FRONTEND_PORT before running setup." >&2
-  exit 1
-fi
+REQ_FRONTEND_PORT="$(get_requested_port "FRONTEND_PORT" "" "FRONTEND_PORT" "3000")"
+FRONTEND_PORT="$(resolve_available_host_port "Frontend" "$REQ_FRONTEND_PORT")"
 
-if is_port_occupied "$API_PORT"; then
-  echo "Error: Required application port $API_PORT is already in use by another process. Please free port $API_PORT or set API_PORT or BACKEND_PORT before running setup." >&2
-  exit 1
-fi
+REQ_API_PORT="$(get_requested_port "API_PORT" "BACKEND_PORT" "API_PORT" "8000")"
+API_PORT="$(resolve_available_host_port "API" "$REQ_API_PORT")"
+
+REQ_POSTGRES_HOST_PORT="$(get_requested_port "POSTGRES_HOST_PORT" "" "POSTGRES_HOST_PORT" "55432")"
+POSTGRES_HOST_PORT="$(resolve_available_host_port "PostgreSQL" "$REQ_POSTGRES_HOST_PORT")"
+
+export FRONTEND_PORT API_PORT POSTGRES_HOST_PORT
 
 # Stage 2: Preparing configuration
 echo "[Stage 2/7] Preparing configuration..."
@@ -284,8 +321,10 @@ echo ""
 echo "======================================================================"
 echo "INSTRUCTOR EVALUATION WORKSPACE READY"
 echo "======================================================================"
-echo "Application URL:         http://localhost:${FRONTEND_PORT}"
+echo "Frontend URL:            http://localhost:${FRONTEND_PORT}"
+echo "API URL:                 http://localhost:${API_PORT}"
 echo "API Documentation URL:   http://localhost:${API_PORT}/docs"
+echo "Health URL:              http://localhost:${API_PORT}/api/health/ready"
 echo "Tenant Code:             $TENANT_CODE"
 echo "Administrator Email:     $ADMIN_EMAIL"
 echo "Administrator Full Name: $ADMIN_FULL_NAME"

@@ -177,28 +177,36 @@ def test_postgres_port_conflict_prevention_and_internal_endpoint():
     assert "@postgres:5432" in compose_content
 
 
-def test_scripts_respect_environment_port_overrides():
-    """Verify setup scripts resolve FRONTEND_PORT and API_PORT/BACKEND_PORT dynamically from process environment."""
+def test_scripts_respect_environment_port_overrides_and_auto_resolution():
+    """Verify setup scripts resolve ports dynamically, auto-scan upward up to 100 ports, and export selected ports."""
     ps_content = PS_SCRIPT.read_text(encoding="utf-8")
     sh_content = SH_SCRIPT.read_text(encoding="utf-8")
 
-    # PowerShell port resolution & error messaging
-    assert "Get-ConfiguredPort" in ps_content
-    assert "Test-IsPortOccupied $frontendPort" in ps_content
-    assert "Test-IsPortOccupied $apiPort" in ps_content
-    assert (
-        "Required application port $frontendPort is already in use" in ps_content
-    )
-    assert "Required application port $apiPort is already in use" in ps_content
+    # PowerShell port resolution & auto-scan logic
+    assert "Get-RequestedPort" in ps_content
+    assert "Resolve-AvailableHostPort" in ps_content
+    assert "Invalid $label host port" in ps_content
+    assert "[Warning] $label host port $requestedPort is already in use." in ps_content
+    assert "[Resolution] Automatically selected $label host port $p." in ps_content
+    assert "100" in ps_content
 
-    # Bash port resolution & error messaging
-    assert "get_configured_port" in sh_content
-    assert 'is_port_occupied "$FRONTEND_PORT"' in sh_content
-    assert 'is_port_occupied "$API_PORT"' in sh_content
-    assert (
-        'Required application port $FRONTEND_PORT is already in use'
-        in sh_content
-    )
-    assert (
-        'Required application port $API_PORT is already in use' in sh_content
-    )
+    # PowerShell environment exports & summary URLs
+    assert '$env:FRONTEND_PORT = "$frontendPort"' in ps_content
+    assert '$env:API_PORT = "$apiPort"' in ps_content
+    assert '$env:POSTGRES_HOST_PORT = "$postgresHostPort"' in ps_content
+    assert 'Frontend URL:            http://localhost:$frontendPort' in ps_content
+    assert 'API URL:                 http://localhost:$apiPort' in ps_content
+    assert 'Health URL:              http://localhost:${apiPort}/api/health/ready' in ps_content
+
+    # Bash port resolution & auto-scan logic
+    assert "get_requested_port" in sh_content
+    assert "resolve_available_host_port" in sh_content
+    assert "Invalid $label host port" in sh_content
+    assert "[Warning] $label host port $req_port is already in use." in sh_content
+    assert "[Resolution] Automatically selected $label host port $p." in sh_content
+    assert "export FRONTEND_PORT API_PORT POSTGRES_HOST_PORT" in sh_content
+
+    # Bash summary URLs
+    assert 'Frontend URL:            http://localhost:${FRONTEND_PORT}' in sh_content
+    assert 'API URL:                 http://localhost:${API_PORT}' in sh_content
+    assert 'Health URL:              http://localhost:${API_PORT}/api/health/ready' in sh_content

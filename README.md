@@ -37,7 +37,9 @@ The assigned instructor has two valid options:
    - **Email:** `instructor@demo.example`
    - **Password:** *(the password supplied in the private document)*
 
----
+> [!NOTE]
+> **Automatic Host Port Conflict Resolution:**
+> Host-port conflicts for the frontend (`FRONTEND_PORT`), API (`API_PORT`), and PostgreSQL (`POSTGRES_HOST_PORT`) are detected automatically. If a requested port is already in use by another application on your host machine, the setup script automatically selects the next available port without stopping existing applications. The final terminal summary displays the exact URLs to access. Manual environment variable overrides (e.g. `$env:FRONTEND_PORT="3001"`) remain fully supported.
 
 ## Reviewer Quick Start
 

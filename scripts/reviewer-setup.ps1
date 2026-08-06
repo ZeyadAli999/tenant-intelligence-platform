@@ -120,20 +120,48 @@ function Test-IsPortOccupied([int]$port) {
     }
 }
 
-function Get-ConfiguredPort([string]$envVarName, [string]$altEnvVarName, [string]$fileKey, [int]$defaultPort, [string]$envFilePath) {
+function Get-RequestedPort([string]$envVarName, [string]$altEnvVarName, [string]$fileKey, [int]$defaultPort, [string]$envFilePath) {
     $val = [Environment]::GetEnvironmentVariable($envVarName)
-    if (-not [string]::IsNullOrWhiteSpace($val)) { return [int]$val }
+    if (-not [string]::IsNullOrWhiteSpace($val)) {
+        if ($val -match "^\d+$") { return [int]$val }
+    }
     if ($altEnvVarName) {
         $altVal = [Environment]::GetEnvironmentVariable($altEnvVarName)
-        if (-not [string]::IsNullOrWhiteSpace($altVal)) { return [int]$altVal }
+        if (-not [string]::IsNullOrWhiteSpace($altVal)) {
+            if ($altVal -match "^\d+$") { return [int]$altVal }
+        }
     }
     if (Test-Path $envFilePath) {
         $map = Get-EnvMap $envFilePath
         if ($map.ContainsKey($fileKey) -and -not [string]::IsNullOrWhiteSpace($map[$fileKey])) {
-            return [int]$map[$fileKey]
+            if ($map[$fileKey] -match "^\d+$") { return [int]$map[$fileKey] }
         }
     }
     return $defaultPort
+}
+
+function Resolve-AvailableHostPort([string]$label, [int]$requestedPort, [int]$maxScans = 100) {
+    if ($requestedPort -lt 1 -or $requestedPort -gt 65535) {
+        Write-Error "Invalid $label host port: $requestedPort. Port must be between 1 and 65535."
+        exit 1
+    }
+
+    if (-not (Test-IsPortOccupied $requestedPort)) {
+        return $requestedPort
+    }
+
+    Write-Host "[Warning] $label host port $requestedPort is already in use." -ForegroundColor Yellow
+
+    $candidateLimit = [Math]::Min($requestedPort + $maxScans, 65535)
+    for ($p = $requestedPort + 1; $p -le $candidateLimit; $p++) {
+        if (-not (Test-IsPortOccupied $p)) {
+            Write-Host "[Resolution] Automatically selected $label host port $p." -ForegroundColor Green
+            return $p
+        }
+    }
+
+    Write-Error "Could not find an available $label host port within $maxScans ports of $requestedPort."
+    exit 1
 }
 
 if (-not (Test-Path "docker-compose.yml") -or -not (Test-Path ".env.example")) {
@@ -151,21 +179,18 @@ if (-not (Test-Path $envPath)) {
     }
 }
 
-$frontendPort = Get-ConfiguredPort "FRONTEND_PORT" $null "FRONTEND_PORT" 3000 $envPath
-$apiPort = Get-ConfiguredPort "API_PORT" "BACKEND_PORT" "API_PORT" 8000 $envPath
+$reqFrontendPort = Get-RequestedPort "FRONTEND_PORT" $null "FRONTEND_PORT" 3000 $envPath
+$frontendPort = Resolve-AvailableHostPort "Frontend" $reqFrontendPort
+
+$reqApiPort = Get-RequestedPort "API_PORT" "BACKEND_PORT" "API_PORT" 8000 $envPath
+$apiPort = Resolve-AvailableHostPort "API" $reqApiPort
+
+$reqPostgresPort = Get-RequestedPort "POSTGRES_HOST_PORT" $null "POSTGRES_HOST_PORT" 55432 $envPath
+$postgresHostPort = Resolve-AvailableHostPort "PostgreSQL" $reqPostgresPort
 
 $env:FRONTEND_PORT = "$frontendPort"
 $env:API_PORT = "$apiPort"
-
-if (Test-IsPortOccupied $frontendPort) {
-    Write-Error "Required application port $frontendPort is already in use by another local process. Please free port $frontendPort or set FRONTEND_PORT before running setup."
-    exit 1
-}
-
-if (Test-IsPortOccupied $apiPort) {
-    Write-Error "Required application port $apiPort is already in use by another local process. Please free port $apiPort or set API_PORT before running setup."
-    exit 1
-}
+$env:POSTGRES_HOST_PORT = "$postgresHostPort"
 
 # Stage 2: Preparing configuration
 Write-Host "[Stage 2/7] Preparing configuration..." -ForegroundColor Cyan
@@ -339,8 +364,10 @@ Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Green
 Write-Host "INSTRUCTOR EVALUATION WORKSPACE READY" -ForegroundColor Green
 Write-Host "======================================================================" -ForegroundColor Green
-Write-Host "Application URL:         http://localhost:$frontendPort"
+Write-Host "Frontend URL:            http://localhost:$frontendPort"
+Write-Host "API URL:                 http://localhost:$apiPort"
 Write-Host "API Documentation URL:   http://localhost:${apiPort}/docs"
+Write-Host "Health URL:              http://localhost:${apiPort}/api/health/ready"
 Write-Host "Tenant Code:             $TenantCode"
 Write-Host "Administrator Email:     $AdminEmail"
 Write-Host "Administrator Full Name: $AdminFullName"
