@@ -128,3 +128,33 @@ def test_scripts_contain_instructor_evaluation_defaults():
     assert "Instructor Evaluation" in sh_content
     assert "Instructor Reviewer" in ps_content
     assert "Instructor Reviewer" in sh_content
+
+
+def test_powershell_root_resolution_uses_psscriptroot():
+    """Verify scripts/reviewer-setup.ps1 uses $PSScriptRoot and not $MyInvocation.MyCommand.Definition."""
+    ps_content = PS_SCRIPT.read_text(encoding="utf-8")
+
+    assert "$PSScriptRoot" in ps_content
+    assert "$MyInvocation.MyCommand.Definition" not in ps_content
+    assert "tenant-intelligence-copilot" not in ps_content.lower()
+
+
+def test_readme_public_naming_and_instructor_content():
+    """Verify README.md is sanitized of internal names and contains required instructor details."""
+    readme_path = ROOT_DIR / "README.md"
+    readme_content = readme_path.read_text(encoding="utf-8")
+    readme_lower = readme_content.lower()
+
+    # Sanitization checks
+    assert "copilot" not in readme_lower
+    assert "codex" not in readme_lower
+    assert "antigravity" not in readme_lower
+
+    # Required instructions and placeholders
+    assert "cd <path-to-downloaded-repository>" in readme_content
+    assert "00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS" in readme_content
+    assert "Option 1:" in readme_content
+    assert "Option 2:" in readme_content
+    assert r".\scripts\reviewer-setup.ps1" in readme_content
+    assert "instructor-review" in readme_content
+    assert "instructor@demo.example" in readme_content

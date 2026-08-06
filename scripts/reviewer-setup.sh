@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-Command Reviewer Setup Script for Tenant Intelligence Copilot (Unix/macOS Bash).
+# One-Command Reviewer Setup Script for Tenant Intelligence (Unix/macOS Bash).
 # Configures environment secrets, builds Docker services, applies migrations,
 # and bootstraps the Tenant Administrator without host Python dependencies.
 
@@ -67,7 +67,7 @@ get_env_var() {
 }
 
 echo "======================================================================"
-echo "TENANT INTELLIGENCE COPILOT — REVIEWER SETUP"
+echo "TENANT INTELLIGENCE - REVIEWER SETUP"
 echo "======================================================================"
 
 # Stage 1: Checking prerequisites

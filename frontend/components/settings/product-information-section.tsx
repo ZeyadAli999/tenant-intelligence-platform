@@ -54,7 +54,7 @@ export function ProductInformationSection() {
             {liveness?.service ?? "Tenant Intelligence"}
           </p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            Multi-Tenant Enterprise Copilot Workspace
+            Multi-Tenant Enterprise Platform Workspace
           </p>
         </div>
 

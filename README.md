@@ -22,7 +22,7 @@ The assigned instructor has two valid options:
 
 1. Clone the repository and open PowerShell in the root directory:
    ```powershell
-   cd C:\path\to\tenant-intelligence-copilot
+   cd <path-to-downloaded-repository>
    ```
 2. Run the automated reviewer setup script:
    ```powershell
@@ -52,7 +52,7 @@ The canonical reviewer path starts the complete platform (Next.js frontend, Fast
 
 1. Clone the repository and open PowerShell in the root directory:
    ```powershell
-   cd C:\path\to\tenant-intelligence-copilot
+   cd <path-to-downloaded-repository>
    ```
 2. Run the automated reviewer setup script:
    ```powershell
@@ -71,7 +71,7 @@ The canonical reviewer path starts the complete platform (Next.js frontend, Fast
 
 1. Clone the repository and open terminal in the root directory:
    ```bash
-   cd /path/to/tenant-intelligence-copilot
+   cd <path-to-downloaded-repository>
    ```
 2. Run the automated reviewer setup script:
    ```bash

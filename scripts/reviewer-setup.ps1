@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    One-Command Reviewer Setup Script for Tenant Intelligence Copilot (Windows PowerShell).
+    One-Command Reviewer Setup Script for Tenant Intelligence (Windows PowerShell).
 .DESCRIPTION
     Configures environment secrets, builds Docker services, applies migrations,
     and bootstraps the Tenant Administrator without host Python dependencies.
@@ -21,8 +21,15 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Get-RepoRoot {
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-    $rootDir = [System.IO.Path]::GetFullPath((Join-Path $scriptDir ".."))
+    $scriptDir = $PSScriptRoot
+    if ([string]::IsNullOrWhiteSpace($scriptDir)) {
+        if ($MyInvocation.MyCommand.Path) {
+            $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+        } else {
+            $scriptDir = Get-Location
+        }
+    }
+    $rootDir = [System.IO.Path]::GetFullPath((Join-Path -Path $scriptDir -ChildPath ".."))
     return $rootDir
 }
 
@@ -85,7 +92,7 @@ $repoRoot = Get-RepoRoot
 Set-Location $repoRoot
 
 Write-Host "======================================================================" -ForegroundColor Cyan
-Write-Host "TENANT INTELLIGENCE COPILOT - REVIEWER SETUP" -ForegroundColor Cyan
+Write-Host "TENANT INTELLIGENCE - REVIEWER SETUP" -ForegroundColor Cyan
 Write-Host "======================================================================" -ForegroundColor Cyan
 
 # Stage 1: Checking prerequisites
