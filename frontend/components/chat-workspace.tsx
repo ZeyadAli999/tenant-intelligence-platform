@@ -150,7 +150,10 @@ function ConversationRail({
           />
         </label>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-2" role="list">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto p-2"
+        role={shown.length ? "list" : undefined}
+      >
         {loading && (
           <p className="p-4 text-sm text-[var(--text-muted)]">
             Loading conversations…

@@ -138,7 +138,7 @@ test("real disposable identity signs in, persists, navigates, and signs out", as
     await page.getByRole("link", { name: "Knowledge" }).first().click();
   }
   await expect(
-    page.getByRole("heading", { name: "Knowledge", exact: true }),
+    page.getByRole("heading", { name: "Knowledge Bases", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: /Open account menu/ }).click();
   await page.getByText("Sign out").click();
@@ -160,7 +160,7 @@ test("mobile viewport remains usable", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("real chat workspace is responsive and accessible", async ({
+test("real empty chat workspace is responsive and accessible", async ({
   page,
 }, testInfo) => {
   const tenant = process.env.E2E_TENANT_CODE;
@@ -178,14 +178,14 @@ test("real chat workspace is responsive and accessible", async ({
   await expect(page).toHaveURL(/\/dashboard/);
   await page.goto("/chat");
   await expect(
-    page.getByRole("heading", { name: "Hybrid verification" }),
+    page.getByRole("heading", { name: "Chat workspace", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Message" })).toBeEnabled();
-  await page.getByRole("button", { name: "Inspect response details" }).click();
-  await page.getByRole("tab", { name: "citations" }).click();
-  const citedTable = page.getByText("business.customers", { exact: true });
   await expect(
-    testInfo.project.name === "mobile" ? citedTable.last() : citedTable.first(),
+    page.getByRole("heading", { name: "No active conversation" }),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Message" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "New conversation" }).last(),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -193,6 +193,7 @@ test("real chat workspace is responsive and accessible", async ({
     ),
   ).toBeTruthy();
   if (testInfo.project.name === "mobile") {
+    await page.getByRole("button", { name: "Open response details" }).click();
     await expect(
       page.getByRole("complementary", { name: "Response details" }),
     ).toBeVisible();

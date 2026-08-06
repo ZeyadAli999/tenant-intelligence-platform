@@ -172,9 +172,12 @@ describe("Phase 5C BFF Contracts & Proxy", () => {
     expect(fetchSpy).toHaveBeenCalled();
 
     const fetchCall = fetchSpy.mock.calls[0] as unknown as [
-      string,
+      URL,
       RequestInit,
     ];
+    expect(fetchCall[0].toString()).toBe(
+      `http://backend.internal:8000/api/knowledge-bases/${validKbUuid}/files`,
+    );
     const fetchHeaders = new Headers(fetchCall[1].headers);
     expect(fetchHeaders.get("content-type")).toBe(
       `multipart/form-data; boundary=${boundary}`,

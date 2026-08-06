@@ -85,11 +85,78 @@ describe("login BFF", () => {
   });
 });
 
-test("backend URL construction cannot be overridden by a request path", async () => {
-  vi.stubEnv("BACKEND_INTERNAL_URL", "http://backend.internal:8000");
-  const { backendUrl } = await import("@/lib/server/config");
-  expect(backendUrl("/api/health/live").origin).toBe(
-    "http://backend.internal:8000",
+describe("backend URL construction", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  test.each([
+    [
+      "http://backend.internal:8000",
+      "knowledge-bases",
+      "http://backend.internal:8000/api/knowledge-bases",
+    ],
+    [
+      "http://backend.internal:8000/",
+      "/conversations",
+      "http://backend.internal:8000/api/conversations",
+    ],
+    [
+      "http://backend.internal:8000/",
+      "/api/database-connections",
+      "http://backend.internal:8000/api/database-connections",
+    ],
+    [
+      "http://backend.internal:8000",
+      "health/live",
+      "http://backend.internal:8000/api/health/live",
+    ],
+    [
+      "http://backend.internal:8000/",
+      "/health/ready",
+      "http://backend.internal:8000/api/health/ready",
+    ],
+    [
+      "http://backend.internal:8000",
+      "/api/auth/me",
+      "http://backend.internal:8000/api/auth/me",
+    ],
+    [
+      "http://backend.internal:8000/api/",
+      "//api//auth//refresh?source=session",
+      "http://backend.internal:8000/api/auth/refresh?source=session",
+    ],
+  ])(
+    "joins %s and %s under the API prefix exactly once",
+    async (base, path, expected) => {
+      vi.stubEnv("BACKEND_INTERNAL_URL", base);
+      const { backendUrl } = await import("@/lib/server/config");
+      const result = backendUrl(path);
+
+      expect(result.toString()).toBe(expected);
+      expect(result.pathname).not.toContain("//");
+      expect(result.pathname).not.toContain("/api/api");
+    },
   );
-  vi.unstubAllEnvs();
+
+  test("a request path cannot override the configured backend origin", async () => {
+    vi.stubEnv("BACKEND_INTERNAL_URL", "http://backend.internal:8000");
+    const { backendUrl } = await import("@/lib/server/config");
+
+    expect(backendUrl("//untrusted.example/health/live").origin).toBe(
+      "http://backend.internal:8000",
+    );
+  });
+
+  test.each([
+    "../health/live",
+    "/api/../health/live",
+    "/api/%2e%2e/health/live",
+    "..\\health\\live",
+  ])("rejects a path that normalizes outside /api: %s", async (path) => {
+    vi.stubEnv("BACKEND_INTERNAL_URL", "http://backend.internal:8000");
+    const { backendUrl } = await import("@/lib/server/config");
+
+    expect(() => backendUrl(path)).toThrow(
+      "Invalid backend configuration or path",
+    );
+  });
 });

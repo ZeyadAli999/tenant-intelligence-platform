@@ -78,6 +78,13 @@ test("renders honest empty state and source-aware conversation dialog", async ()
   expect(
     await screen.findByRole("heading", { name: "No active conversation" }),
   ).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Chat workspace" }),
+  ).toBeVisible();
+  expect(screen.getByRole("textbox", { name: "Message" })).toBeDisabled();
+  expect(
+    screen.getByText("No conversations").closest('[role="list"]'),
+  ).toBeNull();
   await userEvent.click(
     screen.getAllByRole("button", { name: "New conversation" })[0],
   );

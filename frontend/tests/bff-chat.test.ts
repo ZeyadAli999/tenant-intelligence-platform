@@ -81,7 +81,10 @@ describe("chat BFF contracts", () => {
   });
   test("injects cookie authorization and never forwards browser authorization", async () => {
     const fetchMock = vi.fn(
-      async (_input: RequestInfo | URL, init?: RequestInit) => {
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe(
+          "http://backend.internal:8000/api/conversations?page=1&page_size=100",
+        );
         const headers = new Headers(init?.headers);
         expect(headers.get("authorization")).toBe("Bearer server-access");
         expect(headers.get("authorization")).not.toContain("browser-token");
