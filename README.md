@@ -1,5 +1,38 @@
 # Tenant Intelligence
 
+## Instructor Evaluation Access
+
+> [!IMPORTANT]
+> The assigned instructor/evaluator should open the following private document inside the submitted Google Drive folder:
+>
+> **`00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS`**
+>
+> This private document contains:
+> - The dedicated **Groq API Key** (`GROQ_API_KEY`)
+> - The **Administrator Password**
+> - The exact instructor tenant and account login information
+
+### Quick Setup Steps for the Instructor
+
+1. Clone the repository and open PowerShell in the root directory:
+   ```powershell
+   cd C:\path\to\tenant-intelligence-copilot
+   ```
+2. Run the automated reviewer setup script:
+   ```powershell
+   .\scripts\reviewer-setup.ps1
+   ```
+3. When securely prompted:
+   - Paste the **Groq API Key** from the private document.
+   - Paste the **Administrator Password** from the private document.
+4. Open the application in your browser at [http://localhost:3000](http://localhost:3000).
+5. Log in using the instructor credentials from the private document:
+   - **Tenant Code:** `instructor-review`
+   - **Email:** `instructor@demo.example`
+   - **Password:** *(the password supplied in the private document)*
+
+---
+
 ## Reviewer Quick Start
 
 The canonical reviewer path starts the complete platform (Next.js frontend, FastAPI backend, PostgreSQL, Redis, MinIO, and Dramatiq worker) in Docker with **one command**. Host Python or Node installation is **not required**.
@@ -7,7 +40,7 @@ The canonical reviewer path starts the complete platform (Next.js frontend, Fast
 ### Prerequisites
 
 - **Docker Desktop** with Docker Compose v2+ (running)
-- A valid **Groq Cloud API Key** (required for AI Text-to-SQL and document-chat features; get one free at [console.groq.com](https://console.groq.com/))
+- A valid **Groq Cloud API Key** (provided in the private instructor evaluation document)
 
 ### Windows (PowerShell)
 
@@ -21,12 +54,12 @@ The canonical reviewer path starts the complete platform (Next.js frontend, Fast
    ```
 3. Enter your **Groq API Key** and desired **Administrator Password** when securely prompted.
 4. Open the displayed frontend URL in your browser:
-   - **Frontend URL:** [http://localhost:3000](http://localhost:3000)
+   - **Application URL:** [http://localhost:3000](http://localhost:3000)
    - **API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
 5. Log in with:
-   - **Tenant Code:** `demo-tenant`
-   - **Email:** `admin@demo.example`
-   - **Password:** *(the password entered during setup)*
+   - **Tenant Code:** `instructor-review`
+   - **Email:** `instructor@demo.example`
+   - **Password:** *(the password supplied in the private document)*
 
 ### Linux / macOS (Bash)
 
@@ -40,7 +73,7 @@ The canonical reviewer path starts the complete platform (Next.js frontend, Fast
    ./scripts/reviewer-setup.sh
    ```
 3. Enter your **Groq API Key** and desired **Administrator Password** when prompted.
-4. Open [http://localhost:3000](http://localhost:3000) and log in with `demo-tenant` / `admin@demo.example`.
+4. Open [http://localhost:3000](http://localhost:3000) and log in with `instructor-review` / `instructor@demo.example`.
 
 ---
 
@@ -77,8 +110,8 @@ After clean setup, the following initial state is active:
 
 | Demo Item | Exists After Clean Setup | Creation Source | Reviewer Action Needed |
 | --- | --- | --- | --- |
-| **Tenant (`demo-tenant`)** | Yes | `scripts/reviewer-setup.ps1` / `scripts/bootstrap.py` | None (Automatic) |
-| **Administrator (`admin@demo.example`)** | Yes | `scripts/reviewer-setup.ps1` / `scripts/bootstrap.py` | Log in using credentials entered at setup |
+| **Tenant (`instructor-review`)** | Yes | `scripts/reviewer-setup.ps1` / `scripts/bootstrap.py` | None (Automatic) |
+| **Administrator (`instructor@demo.example`)** | Yes | `scripts/reviewer-setup.ps1` / `scripts/bootstrap.py` | Log in using credentials from private document |
 | **Platform DB & Migrations** | Yes | Docker API container startup (`alembic upgrade head`) | None (Automatic) |
 | **Customer DB Connection** | No | Tenant Administrator | Connect customer database via `/databases` workspace |
 | **Table & Column Permissions** | No | Tenant Administrator | Configure table/column access rules via `/permissions` |

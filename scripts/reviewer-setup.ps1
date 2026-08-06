@@ -9,10 +9,10 @@
 
 [CmdletBinding()]
 param(
-    [string]$TenantName = "Demo Tenant",
-    [string]$TenantCode = "demo-tenant",
-    [string]$AdminEmail = "admin@demo.example",
-    [string]$AdminFullName = "Demo Administrator",
+    [string]$TenantName = "Instructor Evaluation",
+    [string]$TenantCode = "instructor-review",
+    [string]$AdminEmail = "instructor@demo.example",
+    [string]$AdminFullName = "Instructor Reviewer",
     [string]$AdminPassword = "",
     [string]$GroqApiKey = "",
     [switch]$NonInteractive
@@ -277,12 +277,12 @@ try {
 
 Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Green
-Write-Host "REVIEWER WORKSPACE READY" -ForegroundColor Green
+Write-Host "INSTRUCTOR EVALUATION WORKSPACE READY" -ForegroundColor Green
 Write-Host "======================================================================" -ForegroundColor Green
-Write-Host "Frontend URL:          http://localhost:3000"
-Write-Host "API Documentation URL: http://localhost:8000/docs"
-Write-Host "Tenant Code:           $TenantCode"
-Write-Host "Administrator Email:   $AdminEmail"
-Write-Host "Password:              (The password entered during setup)"
+Write-Host "Application URL:         http://localhost:3000"
+Write-Host "API Documentation URL:   http://localhost:8000/docs"
+Write-Host "Tenant Code:             $TenantCode"
+Write-Host "Administrator Email:     $AdminEmail"
+Write-Host "Administrator Full Name: $AdminFullName"
+Write-Host "Password:                (The password supplied in the private document)"
 Write-Host "======================================================================" -ForegroundColor Green
-

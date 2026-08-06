@@ -113,3 +113,18 @@ def test_base64url_key_generation_format():
     padding = "=" * (-len(encoded) % 4)
     decoded = base64.b64decode(encoded + padding, altchars=b"-_", validate=True)
     assert len(decoded) == 32
+
+
+def test_scripts_contain_instructor_evaluation_defaults():
+    """Verify setup scripts default to Instructor Evaluation tenant and email credentials."""
+    ps_content = PS_SCRIPT.read_text(encoding="utf-8")
+    sh_content = SH_SCRIPT.read_text(encoding="utf-8")
+
+    assert "instructor-review" in ps_content
+    assert "instructor-review" in sh_content
+    assert "instructor@demo.example" in ps_content
+    assert "instructor@demo.example" in sh_content
+    assert "Instructor Evaluation" in ps_content
+    assert "Instructor Evaluation" in sh_content
+    assert "Instructor Reviewer" in ps_content
+    assert "Instructor Reviewer" in sh_content
