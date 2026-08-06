@@ -1,14 +1,102 @@
 # Tenant Intelligence
 
+## Reviewer Quick Start
+
+The canonical reviewer path starts the complete platform (Next.js frontend, FastAPI backend, PostgreSQL, Redis, MinIO, and Dramatiq worker) in Docker with **one command**. Host Python or Node installation is **not required**.
+
+### Prerequisites
+
+- **Docker Desktop** with Docker Compose v2+ (running)
+- A valid **Groq Cloud API Key** (required for AI Text-to-SQL and document-chat features; get one free at [console.groq.com](https://console.groq.com/))
+
+### Windows (PowerShell)
+
+1. Clone the repository and open PowerShell in the root directory:
+   ```powershell
+   cd C:\path\to\tenant-intelligence-copilot
+   ```
+2. Run the automated reviewer setup script:
+   ```powershell
+   .\scripts\reviewer-setup.ps1
+   ```
+3. Enter your **Groq API Key** and desired **Administrator Password** when securely prompted.
+4. Open the displayed frontend URL in your browser:
+   - **Frontend URL:** [http://localhost:3000](http://localhost:3000)
+   - **API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+5. Log in with:
+   - **Tenant Code:** `demo-tenant`
+   - **Email:** `admin@demo.example`
+   - **Password:** *(the password entered during setup)*
+
+### Linux / macOS (Bash)
+
+1. Clone the repository and open terminal in the root directory:
+   ```bash
+   cd /path/to/tenant-intelligence-copilot
+   ```
+2. Run the automated reviewer setup script:
+   ```bash
+   chmod +x ./scripts/reviewer-setup.sh
+   ./scripts/reviewer-setup.sh
+   ```
+3. Enter your **Groq API Key** and desired **Administrator Password** when prompted.
+4. Open [http://localhost:3000](http://localhost:3000) and log in with `demo-tenant` / `admin@demo.example`.
+
+---
+
+### Startup Details & Service Health
+
+- **First Run Duration:** Approximately 2 to 5 minutes (downloads base images and builds containers). Subsequent starts take under 15 seconds.
+- **Frontend Health Endpoint:** `http://localhost:3000/api/health`
+- **Backend Liveness Endpoint:** `http://localhost:8000/api/health/live`
+- **Backend Readiness Endpoint:** `http://localhost:8000/api/health/ready`
+- **Re-running Setup:** Both setup scripts are fully **idempotent**. You can re-run `.\scripts\reviewer-setup.ps1` at any time without creating duplicate users or losing database state.
+
+### Troubleshooting & Diagnostic Commands
+
+- **Inspect Service Liveness:**
+  ```powershell
+  docker compose ps
+  ```
+- **View Container Logs:**
+  ```powershell
+  docker compose logs api
+  docker compose logs frontend
+  ```
+- **Groq API Key Requirement:**
+  > [!IMPORTANT]
+  > A valid Groq Cloud API key (`GROQ_API_KEY`) is required for application startup. If missing or invalid:
+  > - **Missing Key:** Setup script will prompt for it interactively.
+  > - **Invalid/Rate-Limited Key:** Backend logs will report `401 Unauthorized` or `429 Rate Limit` from Groq Cloud. Update `GROQ_API_KEY` in `.env` and run `docker compose restart api`.
+
+---
+
+### Evidence-Based Demo Data Matrix
+
+After clean setup, the following initial state is active:
+
+| Demo Item | Exists After Clean Setup | Creation Source | Reviewer Action Needed |
+| --- | --- | --- | --- |
+| **Tenant (`demo-tenant`)** | Yes | `scripts/reviewer-setup.ps1` / `scripts/bootstrap.py` | None (Automatic) |
+| **Administrator (`admin@demo.example`)** | Yes | `scripts/reviewer-setup.ps1` / `scripts/bootstrap.py` | Log in using credentials entered at setup |
+| **Platform DB & Migrations** | Yes | Docker API container startup (`alembic upgrade head`) | None (Automatic) |
+| **Customer DB Connection** | No | Tenant Administrator | Connect customer database via `/databases` workspace |
+| **Table & Column Permissions** | No | Tenant Administrator | Configure table/column access rules via `/permissions` |
+| **Document Knowledge Base** | No | Tenant Administrator / User | Upload PDF/DOCX document via `/knowledge` workspace |
+| **Chat Conversations** | No | Authenticated User | Click **New Conversation** via `/chat` workspace |
+
+---
+
 ## Phase 5B chat workspace
 
 The Next.js frontend now includes the production-oriented Phase 5B Chat
+
 Workspace and Phase 5D Database Management surface in `frontend/`. It provides persisted tenant-owned conversations,
 immutable source selection, progressive SSE answers, cancellation, safe SQL
 inspection, database/document citations, usage metadata, responsive
 conversation and evidence drawers, and complete database connection management,
 schema discovery, schema exploration, table inspection, and permitted schema access.
-Permissions and Settings remain honest structural previews for later frontend phases.
+Permissions and Settings are production-quality workspaces for managing database/column/row permissions and tenant/account settings.
 
 The browser never receives tokens in JavaScript-visible storage. Next.js Route
 Handlers proxy authentication to FastAPI and keep access and refresh tokens in
@@ -47,9 +135,7 @@ The frontend container reaches FastAPI at `http://api:8000` and exposes a health
 endpoint at `http://localhost:3000/api/health`.
 
 Routes are `/login`, `/dashboard`, `/chat`, `/knowledge`, `/databases`, `/users`,
-`/permissions`, and `/settings`. Login, dashboard, chat, knowledge, databases, and user administration are functionally
-complete. The remaining protected routes deliberately contain
-no mock business data.
+`/permissions`, and `/settings`. All routes are functionally complete and backed by real backend/BFF contracts without mock data.
 
 ### Frontend capabilities through Phase 5D
 
@@ -132,6 +218,154 @@ recognition, images, legacy Office formats, macro-enabled Office documents, and 
 sharing beyond owner/tenant-admin policy are not supported. Embeddings are CPU-local;
 the first real processing run may need to download the configured model. Qdrant is not
 used because tenant-filtered pgvector and PostgreSQL full-text search are implemented.
+
+## Multi-Tenancy Model and Administrative Scope
+
+### Tenant Definition
+
+A tenant represents one isolated organization or workspace using the shared platform.
+
+Each tenant owns tenant-scoped resources such as:
+
+- users
+- roles
+- permissions
+- database connections
+- catalog metadata
+- conversations
+- uploaded documents
+- document-processing records
+- knowledge records
+- tenant configuration
+
+The platform may serve multiple organizations while preserving strict logical isolation between them.
+
+Tenant identity is resolved from the authenticated session and trusted backend context.
+
+The browser is never allowed to choose, override, or submit an arbitrary tenant identity.
+
+### Tenant Administrator Scope
+
+The current Administrator role is a Tenant Administrator.
+
+A Tenant Administrator can manage resources belonging only to the currently authenticated tenant, including:
+
+- tenant users
+- user roles
+- database permissions
+- masking rules
+- row-level filters
+- connected customer databases
+- tenant documents
+- tenant conversations
+
+A Tenant Administrator is not a platform-wide Super Administrator.
+
+The current Administrator cannot create, modify, suspend, or manage unrelated organizations.
+
+### Why Tenant Profile is Read-Only
+
+The Tenant Profile page intentionally presents organization identity and isolation context as read-only information.
+
+The current backend does not expose a secure tenant-update endpoint.
+
+Displaying editable controls without a real audited backend workflow would create fake functionality and could weaken tenant isolation.
+
+The organization display name may become editable in a future release through a dedicated Administrator-only backend endpoint with:
+
+- authorization
+- validation
+- audit logging
+- safe conflict handling
+- tenant isolation enforcement
+
+The current release intentionally avoids pretending that unsupported editing exists.
+
+### Why Tenant UUID is Not Editable
+
+The tenant UUID is the permanent internal identifier for the organization.
+
+It is used to scope tenant-owned records such as:
+
+- users
+- roles
+- permissions
+- conversations
+- documents
+- database connections
+- catalog metadata
+
+The UUID must remain stable even if the organization display name changes.
+
+Allowing the browser or a normal Administrator to modify this identifier could break references or create a tenant-isolation vulnerability.
+
+The tenant UUID must never be treated as a normal editable profile field.
+
+### Why Tenant Code is Not Casually Editable
+
+The tenant code is a canonical unique identifier.
+
+It may be referenced by:
+
+- provisioning workflows
+- integration configuration
+- routing logic
+- audit records
+- operational tooling
+- external references
+
+Changing it safely would require a dedicated backend workflow with:
+
+- global uniqueness validation
+- authorization
+- conflict handling
+- audit logging
+- migration of dependent references
+
+Therefore, it is displayed as read-only in the current release.
+
+### Why There is No Create Tenant Button
+
+Creating a tenant is a platform-provisioning operation, not a normal Tenant Administrator operation.
+
+A complete Create Tenant workflow would require:
+
+1. A Platform Administrator or Super Administrator role.
+2. Globally unique tenant-code validation.
+3. Creation of the tenant's first Administrator.
+4. Initialization of default roles and permission policies.
+5. Storage and data-isolation setup.
+6. Default configuration provisioning.
+7. Audit logging.
+8. Activation, suspension, and lifecycle controls.
+9. Protection against unauthorized or unlimited tenant creation.
+10. Secure rollback if provisioning fails.
+
+This platform-administration layer is intentionally outside the current project scope.
+
+The absence of a simple Create Tenant button is therefore an explicit security and scope decision, not an overlooked interface feature.
+
+### Current Release Scope
+
+The evaluated release uses a provisioned tenant and demonstrates:
+
+- tenant-scoped authentication
+- tenant-scoped users and roles
+- tenant-scoped database connections
+- table permissions
+- column permissions
+- data masking
+- row-level filtering
+- connected database catalogs
+- document knowledge
+- conversations
+- session isolation
+
+The architecture is designed so additional tenants can later be provisioned through a separate platform-administration layer without weakening the current tenant-security model.
+
+### Reviewer Summary
+
+"The current Administrator is a Tenant Administrator, not a platform-wide Super Administrator. Tenant identity is part of the platform security boundary and is intentionally read-only in this release. Creating a new tenant requires a separate audited provisioning workflow, so adding a simple Create Tenant button would be incomplete and insecure."
 
 ## Architecture
 

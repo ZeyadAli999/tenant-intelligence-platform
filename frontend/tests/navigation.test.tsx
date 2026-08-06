@@ -39,7 +39,7 @@ beforeEach(() => {
   );
 });
 
-test("normal users receive navigation without administration controls", async () => {
+test("normal users receive navigation with Settings at bottom and without administration controls", async () => {
   render(
     <AppShell>
       <p>Content</p>
@@ -48,12 +48,25 @@ test("normal users receive navigation without administration controls", async ()
   expect(
     (await screen.findAllByText("zeyad.said@tenant-intelligence.example"))[0],
   ).toBeVisible();
-  expect(screen.getAllByRole("link", { name: "Overview" }).length).toBeGreaterThan(0);
+
+  // Verify Main group navigation items
+  const mainNav = screen.getByRole("navigation", { name: "Main" });
+  expect(mainNav).toHaveTextContent("Overview");
+  expect(mainNav).toHaveTextContent("Chat");
+  expect(mainNav).toHaveTextContent("Knowledge");
+  expect(mainNav).toHaveTextContent("Databases");
+  expect(mainNav).not.toHaveTextContent("Settings");
+
+  // Verify Administration group is absent for normal users
   expect(screen.queryByText("Administration")).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
+
+  // Verify Settings group is rendered at bottom and accessible
+  const settingsNav = screen.getByRole("navigation", { name: "Settings" });
+  expect(settingsNav).toHaveTextContent("Settings");
 });
 
-test("real Administrators receive navigation, identity, tenant, and badge", async () => {
+test("real Administrators receive navigation, identity, tenant, and badge in proper group order", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => new Response(JSON.stringify(sessionUser(true)))),
@@ -65,7 +78,17 @@ test("real Administrators receive navigation, identity, tenant, and badge", asyn
   );
 
   expect(await screen.findAllByText("Administrator")).not.toHaveLength(0);
-  expect(screen.getAllByRole("link", { name: "Users" }).length).toBeGreaterThan(0);
+
+  // Verify Administration group
+  const adminNav = screen.getByRole("navigation", { name: "Administration" });
+  expect(adminNav).toHaveTextContent("Users");
+  expect(adminNav).toHaveTextContent("Permissions");
+  expect(adminNav).not.toHaveTextContent("Settings");
+
+  // Verify Settings group follows Administration
+  const settingsNav = screen.getByRole("navigation", { name: "Settings" });
+  expect(settingsNav).toHaveTextContent("Settings");
+
   await userEvent.click(
     screen.getAllByRole("button", { name: /Open account menu/ })[0],
   );

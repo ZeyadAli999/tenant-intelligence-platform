@@ -1,4 +1,4 @@
-﻿*.tsbuildinfo
+*.tsbuildinfo
 node_modules/
 .next/
 .auth/
@@ -24,3 +24,6 @@ outputs/
 secrets/
 tmp/
 work/
+# Test harness generated artifacts (not for submission)
+state.json
+demo_policy.txt

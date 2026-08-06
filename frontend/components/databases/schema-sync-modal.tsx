@@ -5,6 +5,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SchemaSyncResponse } from "@/lib/database-contracts";
 
+import { toast } from "@/components/ui/toast";
+
 interface SchemaSyncModalProps {
   isOpen: boolean;
   connectionName: string;
@@ -32,10 +34,11 @@ export function SchemaSyncModal({
     try {
       const syncResult = await onSync();
       setResult(syncResult);
+      toast.success("Schema synchronization completed.");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Schema synchronization failed",
-      );
+      const msg = err instanceof Error ? err.message : "Schema synchronization failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsSyncing(false);
     }

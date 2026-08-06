@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@/components/ui/toast";
+
 import { Search, UserPlus, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import {
@@ -532,6 +534,7 @@ export function UsersWorkspace() {
           onCreate={async (input) => {
             try {
               await createTenantUser(input);
+              toast.success("User created successfully.");
               setCreating(false);
               await load(search, status);
             } catch (reason) {
@@ -549,6 +552,7 @@ export function UsersWorkspace() {
           onSave={async (input) => {
             try {
               await updateTenantUser(editing.id, input);
+              toast.success("User updated successfully.");
               setEditing(null);
               await load(search, status);
             } catch (reason) {

@@ -22,6 +22,14 @@ const tableListQuery = new Set([
   "table_type",
   "search",
 ]);
+const tablePermissionListQuery = new Set([
+  "page",
+  "page_size",
+  "connection_id",
+  "table_id",
+  "user_id",
+  "role_id",
+]);
 
 type Contract = {
   path: string;
@@ -106,6 +114,36 @@ export function resolveContract(
       return { path, query: tableListQuery };
     if (sub === "allowed-schema" && method === "GET")
       return { path, query: new Set() };
+  }
+
+  // Table Permissions contracts
+  if (
+    parts.length === 2 &&
+    parts[0] === "permissions" &&
+    parts[1] === "tables"
+  ) {
+    if (method === "GET") return { path, query: tablePermissionListQuery };
+    if (method === "POST") return { path, query: new Set() };
+  }
+  if (
+    parts.length === 3 &&
+    parts[0] === "permissions" &&
+    parts[1] === "tables" &&
+    uuid.test(parts[2])
+  ) {
+    if (method === "GET") return { path, query: new Set() };
+    if (method === "PUT") return { path, query: new Set() };
+    if (method === "DELETE") return { path, query: new Set() };
+  }
+  if (
+    parts.length === 4 &&
+    parts[0] === "permissions" &&
+    parts[1] === "tables" &&
+    uuid.test(parts[2]) &&
+    parts[3] === "columns"
+  ) {
+    if (method === "GET") return { path, query: new Set() };
+    if (method === "PUT") return { path, query: new Set() };
   }
 
   // Knowledge Bases contracts

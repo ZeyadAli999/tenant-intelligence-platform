@@ -83,6 +83,89 @@ describe("login BFF", () => {
     expect(response.status).toBe(400);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  test("unreachable backend maps to 503 service unavailable, not Invalid credentials", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("fetch failed: ECONNREFUSED");
+      }),
+    );
+    const { POST } = await import("@/app/api/session/login/route");
+    const response = await POST(
+      new NextRequest("http://frontend.local/api/session/login", {
+        method: "POST",
+        body: JSON.stringify({
+          tenant_code: "demo",
+          email: "user@example.com",
+          password: "some-password",
+        }),
+      }),
+    );
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body.message).toBe("The sign-in service is temporarily unavailable.");
+    expect(body.message).not.toBe("Invalid credentials");
+    expect(JSON.stringify(body)).not.toContain("backend.internal");
+    expect(JSON.stringify(body)).not.toContain("8000");
+  });
+
+  test("invalid upstream payload response maps to safe 503 error, not Invalid credentials", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ malformed: "token_response" }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
+    const { POST } = await import("@/app/api/session/login/route");
+    const response = await POST(
+      new NextRequest("http://frontend.local/api/session/login", {
+        method: "POST",
+        body: JSON.stringify({
+          tenant_code: "demo",
+          email: "user@example.com",
+          password: "some-password",
+        }),
+      }),
+    );
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body.message).toBe("The sign-in service is temporarily unavailable.");
+    expect(body.message).not.toBe("Invalid credentials");
+  });
+
+  test("upstream 500 error maps to service error, not Invalid credentials", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ detail: "Database connection failed" }), {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
+    const { POST } = await import("@/app/api/session/login/route");
+    const response = await POST(
+      new NextRequest("http://frontend.local/api/session/login", {
+        method: "POST",
+        body: JSON.stringify({
+          tenant_code: "demo",
+          email: "user@example.com",
+          password: "some-password",
+        }),
+      }),
+    );
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.message).toBe("The service could not complete the request.");
+    expect(body.message).not.toBe("Invalid credentials");
+    expect(JSON.stringify(body)).not.toContain("Database connection failed");
+  });
 });
 
 describe("backend URL construction", () => {

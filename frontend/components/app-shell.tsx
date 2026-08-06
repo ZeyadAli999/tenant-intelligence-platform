@@ -20,6 +20,7 @@ import { ProductIdentity } from "@/components/product-identity";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert } from "@/components/ui/alert";
 import { LoadingState } from "@/components/ui/states";
+import { performClientLogout } from "@/components/ui/toast";
 import {
   hasAdministratorAccess,
   type CurrentUser,
@@ -34,6 +35,8 @@ const mainNavigation = [
 const adminNavigation = [
   ["Users", "/users", Users],
   ["Permissions", "/permissions", ShieldCheck],
+] as const;
+const settingsNavigation = [
   ["Settings", "/settings", Settings],
 ] as const;
 
@@ -43,7 +46,10 @@ export function NavigationGroup({
   onSelect,
 }: {
   label: string;
-  items: typeof mainNavigation | typeof adminNavigation;
+  items:
+    | typeof mainNavigation
+    | typeof adminNavigation
+    | typeof settingsNavigation;
   onSelect?: () => void;
 }) {
   const pathname = usePathname();
@@ -171,6 +177,11 @@ function SidebarContent({
             onSelect={onSelect}
           />
         )}
+        <NavigationGroup
+          label="Settings"
+          items={settingsNavigation}
+          onSelect={onSelect}
+        />
       </div>
       <div className="border-t border-[var(--border)] p-3">
         <div className="mb-2 flex items-center justify-between px-2">
@@ -207,12 +218,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .catch(() => undefined);
   }, [router]);
   async function logout() {
-    await fetch("/api/session/logout", { method: "POST" });
-    router.replace("/login");
-    router.refresh();
+    await performClientLogout(router);
   }
   const currentLabel =
-    [...mainNavigation, ...adminNavigation].find(
+    [...mainNavigation, ...adminNavigation, ...settingsNavigation].find(
       ([, href]) => href === pathname,
     )?.[0] ?? "Workspace";
   const administratorRoute = adminNavigation.some(([, href]) => href === pathname);

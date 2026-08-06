@@ -60,3 +60,84 @@ async def test_bootstrap_hashes_password_assigns_administrator_and_is_idempotent
         assert await session.scalar(select(func.count()).select_from(User)) == 1
         assert await session.scalar(select(func.count()).select_from(Role)) == 2
         assert await session.scalar(select(func.count()).select_from(UserRole)) == 2
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_reactivates_disabled_admin(
+    test_database: DatabaseHarness,
+) -> None:
+    password = "Initial-Password-123!"
+    async with test_database.sessions() as session:
+        res = await bootstrap_identity(
+            session,
+            tenant_name="Disabled Tenant",
+            tenant_code="disabled-tenant",
+            admin_email="disabled@example.com",
+            admin_password=password,
+        )
+        res.administrator.status = "disabled"
+        await session.commit()
+
+    async with test_database.sessions() as session:
+        re_res = await bootstrap_identity(
+            session,
+            tenant_name="Disabled Tenant",
+            tenant_code="disabled-tenant",
+            admin_email="disabled@example.com",
+            admin_password="New-Password-Ignored-456!",
+        )
+        assert re_res.administrator.status == "active"
+        # Initial password hash is preserved on re-run
+        assert verify_password(password, re_res.administrator.password_hash)
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_cross_tenant_same_email_isolation(
+    test_database: DatabaseHarness,
+) -> None:
+    shared_email = "shared-admin@example.com"
+    async with test_database.sessions() as session:
+        t1 = await bootstrap_identity(
+            session,
+            tenant_name="Tenant Alpha",
+            tenant_code="alpha",
+            admin_email=shared_email,
+            admin_password="Alpha-Password-123!",
+        )
+        t2 = await bootstrap_identity(
+            session,
+            tenant_name="Tenant Beta",
+            tenant_code="beta",
+            admin_email=shared_email,
+            admin_password="Beta-Password-123!",
+        )
+
+    assert t1.tenant.id != t2.tenant.id
+    assert t1.administrator.id != t2.administrator.id
+    assert t1.administrator.tenant_id == t1.tenant.id
+    assert t2.administrator.tenant_id == t2.tenant.id
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_partial_existing_state_idempotency(
+    test_database: DatabaseHarness,
+) -> None:
+    async with test_database.sessions() as session:
+        # Pre-create tenant only
+        tenant = Tenant(name="Partial Tenant", code="partial-tenant")
+        session.add(tenant)
+        await session.commit()
+
+    async with test_database.sessions() as session:
+        res = await bootstrap_identity(
+            session,
+            tenant_name="Partial Tenant",
+            tenant_code="partial-tenant",
+            admin_email="partial@example.com",
+            admin_password="Partial-Password-123!",
+        )
+        assert res.tenant.code == "partial-tenant"
+        assert res.administrator.email == "partial@example.com"
+        assert res.roles_created == 1
+        assert res.role_assignments_created == 1
+

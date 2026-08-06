@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,6 +127,7 @@ export function DatabaseModal({
         }
 
         await onSubmit(payload);
+        toast.success("Database connection updated successfully.");
       } else {
         const payload: DatabaseConnectionCreateInput = {
           name: name.trim(),
@@ -141,13 +143,14 @@ export function DatabaseModal({
         };
 
         await onSubmit(payload);
+        toast.success("Database connection created successfully.");
       }
       setPassword(""); // Clear password from memory immediately
       onClose();
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save connection",
-      );
+      const msg = err instanceof Error ? err.message : "Failed to save database connection";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

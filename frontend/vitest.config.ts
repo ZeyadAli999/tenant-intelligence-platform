@@ -3,6 +3,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    fileParallelism: false,
     setupFiles: ["./tests/setup.ts"],
     exclude: ["tests/e2e/**", "node_modules/**"],
     coverage: { reporter: ["text"] },
