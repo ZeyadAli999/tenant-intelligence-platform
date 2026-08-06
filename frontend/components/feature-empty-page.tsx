@@ -38,6 +38,7 @@ export function FeatureEmptyPage({
           </div>
           <div
             aria-label={`${title} interface preview`}
+            role="img"
             className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-elevated)] p-4"
           >
             <div className="mb-4 flex items-center gap-2 border-b border-[var(--border)] pb-3">
@@ -74,7 +75,7 @@ export function FeatureEmptyPage({
             Structural preview only — no sample records or business data.
           </p>
         </section>
-        <aside>
+        <aside aria-label={`${title} capabilities`}>
           <h2 className="text-sm font-semibold">What this area will support</h2>
           <ul className="mt-4 space-y-3">
             {capabilities.map((capability) => (

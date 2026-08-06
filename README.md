@@ -1,4 +1,4 @@
-# Multi-Tenant Text-to-SQL and Document Chat Platform
+# Tenant Intelligence
 
 ## Phase 5B chat workspace
 
@@ -46,9 +46,9 @@ docker compose up --build -d
 The frontend container reaches FastAPI at `http://api:8000` and exposes a health
 endpoint at `http://localhost:3000/api/health`.
 
-Routes are `/login`, `/dashboard`, `/chat`, `/knowledge`, `/databases`,
-`/permissions`, and `/settings`. Login, dashboard, chat, knowledge, and databases are functionally
-complete through Phase 5D. The remaining protected routes deliberately contain
+Routes are `/login`, `/dashboard`, `/chat`, `/knowledge`, `/databases`, `/users`,
+`/permissions`, and `/settings`. Login, dashboard, chat, knowledge, databases, and user administration are functionally
+complete. The remaining protected routes deliberately contain
 no mock business data.
 
 ### Frontend capabilities through Phase 5D
@@ -248,7 +248,7 @@ python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_b
 
 | Variable | Purpose | Example/default |
 | --- | --- | --- |
-| `APP_NAME` | OpenAPI and health service name | `Multi-Tenant Text-to-SQL and Document Chat Platform` |
+| `APP_NAME` | OpenAPI and health service name | `Tenant Intelligence` |
 | `APP_VERSION` | Health and OpenAPI version | `1.0.0` |
 | `API_PREFIX` | Enforced public API prefix | `/api` |
 | `ENVIRONMENT` | Runtime environment | `development` |
@@ -509,18 +509,18 @@ the command line or process list. Values are examples, not hardcoded application
 ```powershell
 $env:BOOTSTRAP_ADMIN_PASSWORD = "choose-a-strong-temporary-password"
 python -m scripts.bootstrap `
-  --tenant-name "Demo Tenant" `
-  --tenant-code "demo" `
-  --admin-email "admin@example.com" `
-  --admin-full-name "Demo Administrator" `
-  --role "administrator" `
+  --tenant-name "Example Tenant" `
+  --tenant-code "example-tenant" `
+  --admin-email "admin@example-tenant.example" `
+  --admin-full-name "Example Administrator" `
   --role "analyst"
 Remove-Item Env:BOOTSTRAP_ADMIN_PASSWORD
 ```
 
 The command normalizes the tenant code, email, and role names; hashes the password with
-Argon2id; and refuses to continue if the tenant code already exists. It never prints the
-password or password hash.
+Argon2id; and idempotently creates or finds the canonical Administrator role and its
+assignment. Repeated runs report separate created and already-existing counts. It never
+prints the password or password hash.
 
 ## Authentication flow
 
@@ -540,8 +540,8 @@ password or password hash.
 
 ```powershell
 $loginBody = @{
-  tenant_code = "demo"
-  email = "admin@example.com"
+  tenant_code = "example-tenant"
+  email = "admin@example-tenant.example"
   password = "the-bootstrap-password"
 } | ConvertTo-Json
 
@@ -596,8 +596,8 @@ Create a user:
 $headers = @{ Authorization = "Bearer $($tokens.access_token)" }
 $user = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/users `
   -Headers $headers -ContentType application/json -Body (@{
-    email = "analyst@example.com"
-    full_name = "Demo Analyst"
+    email = "analyst@example-tenant.example"
+    full_name = "Example Analyst"
     password = "choose-another-strong-password"
   } | ConvertTo-Json)
 ```

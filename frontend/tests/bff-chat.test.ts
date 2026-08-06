@@ -50,7 +50,7 @@ describe("chat BFF contracts", () => {
         "sql",
       ]),
     ).not.toBeNull();
-    expect(resolveContract("GET", ["users"])).toBeNull();
+    expect(resolveContract("GET", ["unsupported"])).toBeNull();
   });
   test("rejects unsupported queries, traversal, and cross-origin mutations", async () => {
     const route = await import("@/app/api/backend/[...path]/route");

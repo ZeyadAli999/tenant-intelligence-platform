@@ -44,7 +44,7 @@ test("database workspace is accessible and responsive", async ({
         is_tenant_admin: true,
         tenant: {
           id: "00000000-0000-0000-0000-000000000000",
-          name: "Demo Tenant",
+          name: "Example Tenant",
           code: "demo",
           status: "active",
         },

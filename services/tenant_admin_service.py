@@ -5,10 +5,10 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import ConflictError, ResourceNotFoundError
+from app.exceptions import ConflictError, FinalAdministratorError, ResourceNotFoundError
 from core.security import hash_password
 from models import Role, User
-from models.role import normalize_role_name
+from models.role import ADMINISTRATOR_ROLE_NAME, normalize_role_name
 from models.user import normalize_email
 from repositories.identity import IdentityRepository
 from schemas.auth import RoleSummary
@@ -42,6 +42,10 @@ def user_response(user: User, roles: list[Role]) -> UserResponse:
     )
 
 
+def has_administrator_role(roles: list[Role]) -> bool:
+    return any(role.name == ADMINISTRATOR_ROLE_NAME for role in roles)
+
+
 class TenantAdminService:
     def __init__(self, session: AsyncSession, tenant_id: UUID) -> None:
         self.session = session
@@ -55,30 +59,48 @@ class TenantAdminService:
         full_name: str | None,
         password: str,
         status: str,
-        is_tenant_admin: bool,
+        role_ids: list[UUID],
     ) -> UserResponse:
+        roles = await self.repository.get_roles_by_ids(self.tenant_id, role_ids)
+        if len(roles) != len(role_ids):
+            raise ResourceNotFoundError
         user = User(
             tenant_id=self.tenant_id,
             email=normalize_email(email),
             full_name=full_name.strip() if full_name else None,
             password_hash=hash_password(password),
             status=status,
-            is_tenant_admin=is_tenant_admin,
+            is_tenant_admin=has_administrator_role(roles),
         )
         self.session.add(user)
         try:
+            await self.session.flush()
+            await self.repository.replace_user_roles(
+                user.id,
+                self.tenant_id,
+                role_ids,
+            )
             await self.session.commit()
         except IntegrityError as exc:
             await self.session.rollback()
             raise ConflictError from exc
         await self.session.refresh(user)
-        return user_response(user, [])
+        return user_response(user, sorted(roles, key=lambda role: role.name))
 
-    async def list_users(self, *, page: int, page_size: int) -> UserListResponse:
+    async def list_users(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        search: str | None = None,
+        status: str | None = None,
+    ) -> UserListResponse:
         users, total = await self.repository.list_users(
             self.tenant_id,
             offset=(page - 1) * page_size,
             limit=page_size,
+            search=search.strip() if search else None,
+            status=status,
         )
         roles = await self.repository.get_roles_for_users(
             [user.id for user in users],
@@ -136,6 +158,18 @@ class TenantAdminService:
         roles = await self.repository.get_roles_by_ids(self.tenant_id, role_ids)
         if len(roles) != len(role_ids):
             raise ResourceNotFoundError
+        active_administrator_ids = await self.repository.active_administrator_ids(
+            self.tenant_id,
+            for_update=True,
+        )
+        remains_administrator = has_administrator_role(roles)
+        if (
+            user.id in active_administrator_ids
+            and not remains_administrator
+            and len(active_administrator_ids) == 1
+        ):
+            raise FinalAdministratorError
+        user.is_tenant_admin = remains_administrator
         await self.repository.replace_user_roles(user.id, self.tenant_id, role_ids)
         try:
             await self.session.commit()
@@ -143,3 +177,46 @@ class TenantAdminService:
             await self.session.rollback()
             raise ResourceNotFoundError from exc
         return user_response(user, sorted(roles, key=lambda role: role.name))
+
+    async def update_user(
+        self,
+        *,
+        user_id: UUID,
+        full_name: str | None,
+        status: str,
+        role_ids: list[UUID] | None,
+    ) -> UserResponse:
+        user = await self.repository.get_user(self.tenant_id, user_id)
+        if user is None:
+            raise ResourceNotFoundError
+        current_roles = await self.repository.get_roles_for_user(
+            user.id,
+            self.tenant_id,
+        )
+        roles = current_roles
+        if role_ids is not None:
+            roles = await self.repository.get_roles_by_ids(self.tenant_id, role_ids)
+            if len(roles) != len(role_ids):
+                raise ResourceNotFoundError
+        active_administrator_ids = await self.repository.active_administrator_ids(
+            self.tenant_id,
+            for_update=True,
+        )
+        if (
+            user.id in active_administrator_ids
+            and (status != "active" or not has_administrator_role(roles))
+            and len(active_administrator_ids) == 1
+        ):
+            raise FinalAdministratorError
+        user.full_name = full_name
+        user.status = status
+        user.is_tenant_admin = has_administrator_role(roles)
+        if role_ids is not None:
+            await self.repository.replace_user_roles(
+                user.id,
+                self.tenant_id,
+                role_ids,
+            )
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user_response(user, roles)

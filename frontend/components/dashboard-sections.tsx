@@ -41,7 +41,7 @@ export function WorkspaceHeader({
         </span>
         <Link
           href="/chat"
-          className="inline-flex min-h-9 items-center rounded-md bg-[var(--primary)] px-3 text-xs font-semibold text-white hover:bg-[var(--primary-hover)]"
+          className="inline-flex min-h-9 items-center rounded-md bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--on-primary)] hover:bg-[var(--primary-hover)]"
         >
           Open chat
         </Link>
@@ -149,28 +149,28 @@ const capabilities = [
     "Conversational intelligence",
     "Ask governed questions across database, document, or hybrid sources.",
     "/chat",
-    "Workspace coming next",
+    "Available",
   ],
   [
     BookOpen,
     "Knowledge sources",
     "Organize approved files into traceable, citation-ready knowledge.",
     "/knowledge",
-    "Management UI upcoming",
+    "Available",
   ],
   [
     Database,
     "Database access",
     "Connect PostgreSQL sources and discover metadata without copying business rows.",
     "/databases",
-    "Management UI upcoming",
+    "Available",
   ],
   [
     ShieldCheck,
     "Security and governance",
     "Control tables, columns, row filters, masking, and tenant boundaries.",
     "/permissions",
-    "Administration UI upcoming",
+    "Administration controls",
   ],
 ] as const;
 export function CapabilitySections() {

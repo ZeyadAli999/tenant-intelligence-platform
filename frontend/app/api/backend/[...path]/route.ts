@@ -5,6 +5,7 @@ import { authenticatedFetch, setSessionCookies } from "@/lib/server/session";
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const listQuery = new Set(["page", "page_size"]);
+const userListQuery = new Set(["page", "page_size", "search", "status"]);
 const detailQuery = new Set(["message_page", "message_page_size"]);
 const fileListQuery = new Set([
   "knowledge_base_id",
@@ -35,6 +36,22 @@ export function resolveContract(
 ): Contract | null {
   const path = parts.join("/");
   if (method === "GET" && ["health/live", "health/ready"].includes(path))
+    return { path, query: new Set() };
+  if (path === "users") {
+    if (method === "GET") return { path, query: userListQuery };
+    if (method === "POST") return { path, query: new Set() };
+  }
+  if (path === "roles" && method === "GET") return { path, query: listQuery };
+  if (parts.length === 2 && parts[0] === "users" && uuid.test(parts[1])) {
+    if (method === "PUT") return { path, query: new Set() };
+  }
+  if (
+    parts.length === 3 &&
+    parts[0] === "users" &&
+    uuid.test(parts[1]) &&
+    parts[2] === "roles" &&
+    method === "PUT"
+  )
     return { path, query: new Set() };
   if (path === "conversations") {
     if (method === "GET") return { path, query: listQuery };
@@ -265,7 +282,7 @@ export async function handleProxy(
       });
     } else {
       const data = await upstream.text();
-      let parsed = data;
+      let parsed: unknown = data;
       try {
         parsed = JSON.parse(data);
       } catch {
@@ -274,8 +291,19 @@ export async function handleProxy(
 
       if (!upstream.ok) {
         const message = safeBackendMessage(upstream.status);
+        const upstreamCode =
+          parsed !== null && typeof parsed === "object" && "code" in parsed
+            ? parsed.code
+            : undefined;
+        const code =
+          (upstream.status === 403 &&
+            upstreamCode === "ADMINISTRATOR_REQUIRED") ||
+          (upstream.status === 409 &&
+            upstreamCode === "FINAL_ACTIVE_ADMINISTRATOR_REQUIRED")
+            ? upstreamCode
+            : undefined;
         nextResponse = NextResponse.json(
-          { error: message },
+          { error: message, ...(code ? { code } : {}) },
           { status: upstream.status },
         );
       } else {

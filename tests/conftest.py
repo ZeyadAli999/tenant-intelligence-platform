@@ -2,7 +2,7 @@
 
 import os
 
-os.environ["APP_NAME"] = "Multi-Tenant Text-to-SQL and Document Chat Platform"
+os.environ["APP_NAME"] = "Tenant Intelligence"
 os.environ["APP_VERSION"] = "1.0.0"
 os.environ["API_PREFIX"] = "/api"
 os.environ["DATABASE_URL"] = (

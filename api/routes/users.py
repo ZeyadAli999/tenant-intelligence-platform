@@ -1,6 +1,6 @@
 """Tenant-administrator user endpoints."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -13,6 +13,7 @@ from schemas.users import (
     UserListResponse,
     UserResponse,
     UserRoleAssignmentRequest,
+    UserUpdateRequest,
 )
 from services.tenant_admin_service import TenantAdminService
 
@@ -30,7 +31,7 @@ async def create_user(
         full_name=payload.full_name,
         password=payload.password.get_secret_value(),
         status=payload.status,
-        is_tenant_admin=payload.is_tenant_admin,
+        role_ids=payload.role_ids,
     )
 
 
@@ -40,10 +41,32 @@ async def list_users(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 50,
+    search: Annotated[str | None, Query(max_length=255)] = None,
+    status_filter: Annotated[
+        Literal["active", "inactive"] | None,
+        Query(alias="status"),
+    ] = None,
 ) -> UserListResponse:
     return await TenantAdminService(session, context.tenant.id).list_users(
         page=page,
         page_size=page_size,
+        search=search,
+        status=status_filter,
+    )
+
+
+@router.put("/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: UUID,
+    payload: UserUpdateRequest,
+    context: Annotated[TenantContext, Depends(require_tenant_admin)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> UserResponse:
+    return await TenantAdminService(session, context.tenant.id).update_user(
+        user_id=user_id,
+        full_name=payload.full_name,
+        status=payload.status,
+        role_ids=payload.role_ids,
     )
 
 

@@ -65,7 +65,7 @@ class RecordingFlow(SmokeFlow):
     ("module", "message"),
     [
         (smoke_groq_phase4_document, "Real Groq document verification not executed"),
-        (smoke_groq_phase4_hybrid, "Real Groq hybrid verification not executed"),
+        (smoke_groq_phase4_hybrid, "Real Groq hybrid smoke check not executed"),
     ],
 )
 def test_real_smokes_are_inert_without_double_gate(

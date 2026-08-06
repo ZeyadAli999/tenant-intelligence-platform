@@ -7,7 +7,7 @@ export const Input = forwardRef<
   return (
     <input
       ref={ref}
-      className={`min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[15px] text-[var(--text)] placeholder:text-[var(--text-muted)] hover:border-[var(--text-muted)] disabled:opacity-60 ${className}`}
+      className={`min-h-11 w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[15px] text-[var(--text)] placeholder:text-[var(--text-muted)] hover:border-[var(--text-muted)] disabled:opacity-[var(--disabled-opacity)] ${className}`}
       {...props}
     />
   );

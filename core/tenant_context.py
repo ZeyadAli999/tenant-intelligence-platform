@@ -9,10 +9,11 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db_session
-from app.exceptions import AuthenticationError, AuthorizationError
+from app.exceptions import AdministratorRequiredError, AuthenticationError
 from app.middleware import get_request_id
 from core.security import decode_token
 from models import EntityStatus, Role, Tenant, User
+from models.role import ADMINISTRATOR_ROLE_NAME
 from repositories.identity import IdentityRepository
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,9 @@ class TenantContext:
 
     @property
     def is_tenant_admin(self) -> bool:
-        return self.user.is_tenant_admin
+        return self.user.is_tenant_admin and any(
+            role.name == ADMINISTRATOR_ROLE_NAME for role in self.roles
+        )
 
 
 async def get_tenant_context(
@@ -65,9 +68,17 @@ async def require_tenant_admin(
 ) -> TenantContext:
     """Require tenant-administrator authority within the verified tenant."""
     if not context.is_tenant_admin:
-        logger.info(
-            "Tenant administrator authorization rejected request_id=%r",
+        target_resource = request.url.path.removeprefix("/api/").split("/", 1)[0]
+        logger.warning(
+            "administrator_access tenant_id=%s actor_user_id=%s "
+            "attempted_action=%s:%s target_resource_type=%s outcome=denied "
+            "request_id=%r",
+            context.tenant.id,
+            context.user.id,
+            request.method,
+            request.url.path,
+            target_resource,
             get_request_id(request),
         )
-        raise AuthorizationError
+        raise AdministratorRequiredError
     return context

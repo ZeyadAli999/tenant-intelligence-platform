@@ -30,6 +30,11 @@ class AuthorizationError(ApplicationError):
     detail = "Insufficient permissions"
 
 
+class AdministratorRequiredError(AuthorizationError):
+    detail = "Administrator access required"
+    code = "ADMINISTRATOR_REQUIRED"
+
+
 class ResourceNotFoundError(ApplicationError):
     status_code = 404
     detail = "Resource not found"
@@ -38,6 +43,11 @@ class ResourceNotFoundError(ApplicationError):
 class ConflictError(ApplicationError):
     status_code = 409
     detail = "Resource already exists"
+
+
+class FinalAdministratorError(ConflictError):
+    detail = "At least one active Administrator must remain"
+    code = "FINAL_ACTIVE_ADMINISTRATOR_REQUIRED"
 
 
 class UnsupportedDatabaseTypeError(ApplicationError):

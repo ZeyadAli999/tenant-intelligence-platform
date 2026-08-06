@@ -44,7 +44,7 @@ test("knowledge workspace is accessible and responsive", async ({
         is_tenant_admin: true,
         tenant: {
           id: "00000000-0000-0000-0000-000000000000",
-          name: "Demo Tenant",
+          name: "Example Tenant",
           code: "demo",
           status: "active",
         },
@@ -63,7 +63,7 @@ test("knowledge workspace is accessible and responsive", async ({
         items: [
           {
             id: "11111111-1111-4111-8111-111111111111",
-            name: "Demo Knowledge Base",
+            name: "Example Knowledge Base",
             description: "Approved organizational policies and documentation.",
             embedding_model:
               "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -124,7 +124,7 @@ test("knowledge workspace is accessible and responsive", async ({
   await expect(
     page.getByRole("heading", { name: "Knowledge Bases" }),
   ).toBeVisible();
-  await expect(page.getByText("Demo Knowledge Base")).toBeVisible();
+  await expect(page.getByText("Example Knowledge Base")).toBeVisible();
 
   // Test responsiveness across viewports
   for (const width of responsiveWidths) {

@@ -19,6 +19,8 @@ from sqlalchemy.orm import Mapped, mapped_column, validates
 from database.base import Base
 from models.mixins import UUIDPrimaryKeyMixin
 
+ADMINISTRATOR_ROLE_NAME = "administrator"
+
 
 def normalize_role_name(value: str) -> str:
     """Create the canonical tenant-scoped role name."""

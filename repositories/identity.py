@@ -4,10 +4,11 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import RefreshToken, Role, Tenant, User, UserRole
+from models.role import ADMINISTRATOR_ROLE_NAME
 
 
 class IdentityRepository:
@@ -120,15 +121,28 @@ class IdentityRepository:
         *,
         offset: int,
         limit: int,
+        search: str | None = None,
+        status: str | None = None,
     ) -> tuple[list[User], int]:
+        filters = [User.tenant_id == tenant_id]
+        if search:
+            pattern = f"%{search.casefold()}%"
+            filters.append(
+                or_(
+                    func.lower(User.email).like(pattern),
+                    func.lower(func.coalesce(User.full_name, "")).like(pattern),
+                )
+            )
+        if status:
+            filters.append(User.status == status)
         total = await self.session.scalar(
-            select(func.count()).select_from(User).where(User.tenant_id == tenant_id)
+            select(func.count()).select_from(User).where(*filters)
         )
         users = list(
             (
                 await self.session.scalars(
                     select(User)
-                    .where(User.tenant_id == tenant_id)
+                    .where(*filters)
                     .order_by(User.created_at, User.id)
                     .offset(offset)
                     .limit(limit)
@@ -140,6 +154,11 @@ class IdentityRepository:
     async def get_role(self, tenant_id: UUID, role_id: UUID) -> Role | None:
         return await self.session.scalar(
             select(Role).where(Role.tenant_id == tenant_id, Role.id == role_id)
+        )
+
+    async def get_role_by_name(self, tenant_id: UUID, name: str) -> Role | None:
+        return await self.session.scalar(
+            select(Role).where(Role.tenant_id == tenant_id, Role.name == name)
         )
 
     async def get_roles_by_ids(
@@ -199,3 +218,33 @@ class IdentityRepository:
             UserRole(user_id=user_id, role_id=role_id, tenant_id=tenant_id)
             for role_id in role_ids
         )
+
+    async def active_administrator_ids(
+        self,
+        tenant_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> list[UUID]:
+        statement = (
+            select(User.id)
+            .join(
+                UserRole,
+                (UserRole.user_id == User.id)
+                & (UserRole.tenant_id == User.tenant_id),
+            )
+            .join(
+                Role,
+                (Role.id == UserRole.role_id)
+                & (Role.tenant_id == UserRole.tenant_id),
+            )
+            .where(
+                User.tenant_id == tenant_id,
+                User.status == "active",
+                User.is_tenant_admin.is_(True),
+                Role.name == ADMINISTRATOR_ROLE_NAME,
+            )
+            .order_by(User.id)
+        )
+        if for_update:
+            statement = statement.with_for_update(of=User)
+        return list((await self.session.scalars(statement)).all())

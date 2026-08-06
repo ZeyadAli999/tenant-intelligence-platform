@@ -20,7 +20,7 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
     )
 
-    app_name: str = "Multi-Tenant Text-to-SQL and Document Chat Platform"
+    app_name: str = "Tenant Intelligence"
     app_version: str = "1.0.0"
     api_prefix: Literal["/api"] = "/api"
     environment: Literal["development", "test", "staging", "production"] = "development"

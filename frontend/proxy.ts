@@ -6,6 +6,7 @@ const protectedPrefixes = [
   "/chat",
   "/knowledge",
   "/databases",
+  "/users",
   "/permissions",
   "/settings",
 ];
@@ -28,6 +29,7 @@ export const config = {
     "/chat/:path*",
     "/knowledge/:path*",
     "/databases/:path*",
+    "/users/:path*",
     "/permissions/:path*",
     "/settings/:path*",
   ],

@@ -1,19 +1,33 @@
 "use client";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark" | "system";
 const themes: Theme[] = ["system", "light", "dark"];
+
+function currentTheme(): Theme {
+  const stored = localStorage.getItem("theme");
+  return stored === "light" || stored === "dark" ? stored : "system";
+}
+
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("tenant-intelligence-theme", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("tenant-intelligence-theme", callback);
+  };
+}
+
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "system";
-    const stored = localStorage.getItem("theme");
-    return stored === "light" || stored === "dark" ? stored : "system";
-  });
+  const theme = useSyncExternalStore(
+    subscribe,
+    currentTheme,
+    (): Theme => "system",
+  );
   function cycle() {
     const next =
       themes[(themes.indexOf(theme) + 1) % themes.length] ?? "system";
-    setTheme(next);
     if (next === "system") {
       localStorage.removeItem("theme");
       delete document.documentElement.dataset.theme;
@@ -21,6 +35,7 @@ export function ThemeToggle() {
       localStorage.setItem("theme", next);
       document.documentElement.dataset.theme = next;
     }
+    window.dispatchEvent(new Event("tenant-intelligence-theme"));
   }
   const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
   return (

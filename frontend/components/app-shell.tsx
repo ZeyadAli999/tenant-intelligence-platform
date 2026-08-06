@@ -10,6 +10,7 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +18,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProductIdentity } from "@/components/product-identity";
 import { ThemeToggle } from "@/components/theme-toggle";
-import type { CurrentUser } from "@/lib/contracts";
+import { Alert } from "@/components/ui/alert";
+import { LoadingState } from "@/components/ui/states";
+import {
+  hasAdministratorAccess,
+  type CurrentUser,
+} from "@/lib/contracts";
 
 const mainNavigation = [
   ["Overview", "/dashboard", LayoutDashboard],
@@ -26,6 +32,7 @@ const mainNavigation = [
   ["Databases", "/databases", Database],
 ] as const;
 const adminNavigation = [
+  ["Users", "/users", Users],
   ["Permissions", "/permissions", ShieldCheck],
   ["Settings", "/settings", Settings],
 ] as const;
@@ -51,7 +58,7 @@ export function NavigationGroup({
           return (
             <Link
               key={href}
-              href={href}
+              href={href as never}
               onClick={onSelect}
               aria-current={active ? "page" : undefined}
               className={`relative flex min-h-10 items-center gap-3 rounded-[5px] px-3 text-sm font-medium ${active ? "bg-[var(--nav-selected)] text-[var(--text)] before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:bg-[var(--primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text)]"}`}
@@ -75,12 +82,13 @@ function AccountMenu({
   logout: () => Promise<void>;
   mobile?: boolean;
 }) {
+  const administrator = hasAdministratorAccess(user);
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger
+        aria-label="Open account menu"
         className={`flex min-h-11 w-full items-center gap-3 rounded-md px-2 text-left hover:bg-[var(--surface-subtle)] ${mobile ? "justify-end" : ""}`}
       >
-        <span className="sr-only">Open account menu</span>
         <span
           aria-hidden
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-xs font-semibold text-[var(--text-secondary)]"
@@ -93,6 +101,11 @@ function AccountMenu({
           <span className="block truncate text-sm font-medium">
             {user?.full_name || "Workspace account"}
           </span>
+          {administrator && (
+            <span className="mt-0.5 inline-flex rounded-full border border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_8%,var(--surface))] px-2 py-0.5 text-[10px] font-semibold text-[var(--primary)]">
+              Administrator
+            </span>
+          )}
           <span className="block truncate text-xs text-[var(--text-muted)]">
             {user?.email || "Loading identity"}
           </span>
@@ -102,12 +115,22 @@ function AccountMenu({
           className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
         />
       </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="end"
-          sideOffset={6}
-          className="z-50 min-w-56 rounded-md border border-[var(--border-strong)] bg-[var(--surface-elevated)] p-1 shadow-lg"
-        >
+      <DropdownMenu.Content
+        align="end"
+        sideOffset={6}
+        className="z-50 min-w-56 rounded-md border border-[var(--border-strong)] bg-[var(--surface-elevated)] p-1 shadow-lg"
+      >
+          <div className="border-b border-[var(--border)] px-3 py-2.5">
+            <p className="truncate text-sm font-semibold">
+              {user?.full_name || "User"}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">
+              {user?.email || "Loading identity"}
+            </p>
+            <p className="mt-2 truncate text-xs text-[var(--text-muted)]">
+              {user?.tenant.name || "Tenant Intelligence"}
+            </p>
+          </div>
           <DropdownMenu.Item
             onSelect={logout}
             className="flex cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm text-[var(--danger)] outline-none focus:bg-[var(--surface-subtle)]"
@@ -115,8 +138,7 @@ function AccountMenu({
             <LogOut aria-hidden className="h-4 w-4" />
             Sign out
           </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
+      </DropdownMenu.Content>
     </DropdownMenu.Root>
   );
 }
@@ -130,6 +152,7 @@ function SidebarContent({
   logout: () => Promise<void>;
   onSelect?: () => void;
 }) {
+  const administrator = hasAdministratorAccess(user);
   return (
     <>
       <div className="flex h-[76px] items-center border-b border-[var(--border)] px-5">
@@ -141,11 +164,13 @@ function SidebarContent({
           items={mainNavigation}
           onSelect={onSelect}
         />
-        <NavigationGroup
-          label="Administration"
-          items={adminNavigation}
-          onSelect={onSelect}
-        />
+        {administrator && (
+          <NavigationGroup
+            label="Administration"
+            items={adminNavigation}
+            onSelect={onSelect}
+          />
+        )}
       </div>
       <div className="border-t border-[var(--border)] p-3">
         <div className="mb-2 flex items-center justify-between px-2">
@@ -190,9 +215,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [...mainNavigation, ...adminNavigation].find(
       ([, href]) => href === pathname,
     )?.[0] ?? "Workspace";
+  const administratorRoute = adminNavigation.some(([, href]) => href === pathname);
+  const administrator = hasAdministratorAccess(user);
+  const content = administratorRoute ? (
+    user === null ? (
+      <LoadingState label="Verifying administrator access…" />
+    ) : administrator ? (
+      children
+    ) : (
+      <section aria-labelledby="access-denied-heading" className="max-w-2xl">
+        <h1 id="access-denied-heading" className="text-xl font-semibold">
+          Administration access required
+        </h1>
+        <div className="mt-4">
+          <Alert>Access denied. This area is restricted to Administrators.</Alert>
+        </div>
+      </section>
+    )
+  ) : (
+    children
+  );
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-[var(--border)] bg-[var(--sidebar)] lg:flex lg:flex-col">
+      <aside
+        aria-label="Primary navigation"
+        className="fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-[var(--border)] bg-[var(--sidebar)] lg:flex lg:flex-col"
+      >
         <SidebarContent user={user} logout={logout} />
       </aside>
       {open && (
@@ -251,7 +299,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               : "mx-auto w-full max-w-[1240px] px-5 py-7 sm:px-8 lg:px-10 lg:py-9"
           }
         >
-          {children}
+          {content}
         </main>
       </div>
     </div>

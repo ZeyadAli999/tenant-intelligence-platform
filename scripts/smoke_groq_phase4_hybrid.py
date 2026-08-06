@@ -18,7 +18,7 @@ from scripts.phase4_smoke import (
 
 def main(flow_factory: FlowFactory | None = None) -> int:
     if not authorized():
-        print("Real Groq hybrid verification not executed")
+        print("Real Groq hybrid smoke check not executed")
         return 0
     factory = flow_factory or (lambda: CommandBackedFlow("hybrid"))
     return run_flow(factory(), HYBRID_STAGES)

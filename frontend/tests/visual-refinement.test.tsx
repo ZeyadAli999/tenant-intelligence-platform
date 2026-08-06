@@ -33,10 +33,12 @@ const user: CurrentUser = {
   created_at: "2026-01-01T00:00:00Z",
 };
 
-test("product identity renders the monogram, wordmark, and descriptor", () => {
-  render(<ProductIdentity />);
+test("product identity renders an accessible wordmark and decorative vector monogram", () => {
+  const { container } = render(<ProductIdentity />);
   expect(screen.getByLabelText("Tenant Intelligence")).toBeVisible();
   expect(screen.getByText("Secure intelligence workspace")).toBeVisible();
+  expect(container.querySelector("svg")).toBeTruthy();
+  expect(container.querySelector("[aria-hidden='true'] svg")).toBeTruthy();
 });
 test("login uses the structured capability composition", () => {
   vi.stubGlobal(
@@ -120,7 +122,11 @@ test("light and dark semantic tokens include refined surfaces", () => {
     "--border-strong",
     "--nav-selected",
     "--code-surface",
+    "--disabled-opacity",
   ])
     expect(css).toContain(token);
   expect(css).toContain('[data-theme="dark"]');
+  expect(css).toContain("@media (prefers-reduced-motion: no-preference)");
+  expect(css).toContain("--focus: #1d4ed8");
+  expect(css).toContain("--focus: #93c5fd");
 });

@@ -31,7 +31,7 @@ async def test_liveness_reports_service_metadata() -> None:
     assert response.status_code == 200
     assert response.json() == {
         "status": "ok",
-        "service": "Multi-Tenant Text-to-SQL and Document Chat Platform",
+        "service": "Tenant Intelligence",
         "version": "1.0.0",
     }
 
@@ -87,7 +87,7 @@ async def test_openapi_documents_health_endpoints() -> None:
     assert response.status_code == 200
     schema = response.json()
     assert schema["info"]["title"] == (
-        "Multi-Tenant Text-to-SQL and Document Chat Platform"
+        "Tenant Intelligence"
     )
     assert schema["info"]["version"] == "1.0.0"
     assert {"/api/health/live", "/api/health/ready"}.issubset(schema["paths"])

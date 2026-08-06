@@ -259,7 +259,7 @@ export function KBListView({ onSelectKB }: KBListViewProps) {
                   <Button
                     type="button"
                     onClick={() => onSelectKB(kb.id)}
-                    className="h-8 min-h-0 text-xs px-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white"
+                    className="h-8 min-h-0 text-xs px-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--on-primary)]"
                   >
                     View Files
                   </Button>

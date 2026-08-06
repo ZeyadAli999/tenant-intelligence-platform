@@ -30,7 +30,7 @@ def create_app() -> FastAPI:
         debug=settings.debug,
         lifespan=lifespan,
         description=(
-            "Phase 4 tenant-isolated database, document, and hybrid chat with "
+            "Tenant-isolated database, document, and hybrid chat with "
             "validated read-only SQL, local embeddings, grounded citations, "
             "masked results, auditable conversations, and SSE streaming."
         ),

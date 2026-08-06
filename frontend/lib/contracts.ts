@@ -3,6 +3,7 @@ import { z } from "zod";
 export * from "./chat-contracts";
 export * from "./knowledge-contracts";
 export * from "./database-contracts";
+export * from "./admin-contracts";
 
 export const loginSchema = z.object({
   tenant_code: z.string().trim().min(1, "Tenant code is required").max(100),
@@ -41,3 +42,10 @@ export const currentUserSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CurrentUser = z.infer<typeof currentUserSchema>;
+
+export function hasAdministratorAccess(user: CurrentUser | null): boolean {
+  return Boolean(
+    user?.is_tenant_admin &&
+      user.roles.some((role) => role.name.toLowerCase() === "administrator"),
+  );
+}

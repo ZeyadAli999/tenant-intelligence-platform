@@ -2,10 +2,16 @@ export function ProductMonogram({ compact = false }: { compact?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`${compact ? "h-8 w-8" : "h-10 w-10"} relative inline-flex shrink-0 items-center justify-center rounded-md border border-[var(--border-strong)] bg-[var(--text)] text-[var(--surface)]`}
+      className={`${compact ? "h-8 w-8" : "h-10 w-10"} inline-flex shrink-0`}
     >
-      <span className="text-[11px] font-semibold tracking-[-0.08em]">TI</span>
-      <span className="absolute bottom-1 right-1 h-1 w-1 bg-[var(--primary)]" />
+      <svg viewBox="0 0 40 40" className="h-full w-full" focusable="false">
+        <rect width="40" height="40" rx="8" fill="var(--text)" />
+        <path
+          d="M8 10h19v5h-7v16h-5V15H8z"
+          fill="var(--surface)"
+        />
+        <path d="M27 10h5v21h-5z" fill="var(--primary)" />
+      </svg>
     </span>
   );
 }
