@@ -41,10 +41,31 @@ function New-Base64UrlSecret([int]$byteCount = 32) {
     return $base64.Replace('+', '-').Replace('/', '_').TrimEnd('=')
 }
 
+function New-HexSecret([int]$byteCount = 16) {
+    $bytes = New-Object byte[] $byteCount
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    $rng.GetBytes($bytes)
+    return [BitConverter]::ToString($bytes).Replace("-", "").ToLowerInvariant()
+}
+
 function Test-IsPlaceholder([string]$val) {
     if ([string]::IsNullOrWhiteSpace($val)) { return $true }
     $v = $val.Trim().ToLowerInvariant()
     if ($v.StartsWith("replace-") -or $v.StartsWith("change-me") -or $v.StartsWith("changeme") -or $v.StartsWith("your-")) { return $true }
+    return $false
+}
+
+function Test-IsInvalidMinioCredential([string]$val, [int]$minLen = 8) {
+    if (Test-IsPlaceholder $val) { return $true }
+    if (-not $val -or $val.Trim().Length -lt $minLen) { return $true }
+    $lower = $val.Trim().ToLowerInvariant()
+    $knownPublicDefaults = @(
+        "local-minio-root-user",
+        "local-minio-root-password-32-bytes",
+        "local-minio-app-user",
+        "local-minio-app-password-32-bytes"
+    )
+    if ($knownPublicDefaults -contains $lower) { return $true }
     return $false
 }
 
@@ -241,22 +262,33 @@ if (Test-IsPlaceholder $maskKey -or ($maskKey -and $maskKey.Length -lt 32)) {
     Write-Host "Generated secure RESULT_MASKING_KEY" -ForegroundColor Green
 }
 
-# Ensure MinIO object-storage credentials are non-placeholder values
-$minioUser = $envMap["MINIO_ROOT_USER"]
-if (Test-IsPlaceholder $minioUser -or (-not $minioUser) -or $minioUser.Length -lt 8) {
-    Set-EnvVariable $envPath "MINIO_ROOT_USER" "local-minio-root-user"
+# Generate independent secure MinIO credentials if missing, placeholder, or matching public defaults
+$minioRootUser = $envMap["MINIO_ROOT_USER"]
+if (Test-IsInvalidMinioCredential $minioRootUser 8) {
+    $minioRootUser = "minio-root-" + (New-HexSecret 8)
+    Set-EnvVariable $envPath "MINIO_ROOT_USER" $minioRootUser
+    Write-Host "Generated secure MINIO_ROOT_USER" -ForegroundColor Green
 }
-$minioPass = $envMap["MINIO_ROOT_PASSWORD"]
-if (Test-IsPlaceholder $minioPass -or (-not $minioPass) -or $minioPass.Length -lt 8) {
-    Set-EnvVariable $envPath "MINIO_ROOT_PASSWORD" "local-minio-root-password-32-bytes"
+
+$minioRootPass = $envMap["MINIO_ROOT_PASSWORD"]
+if (Test-IsInvalidMinioCredential $minioRootPass 32) {
+    $minioRootPass = New-Base64UrlSecret 32
+    Set-EnvVariable $envPath "MINIO_ROOT_PASSWORD" $minioRootPass
+    Write-Host "Generated secure MINIO_ROOT_PASSWORD" -ForegroundColor Green
 }
-$minioKey = $envMap["MINIO_APP_ACCESS_KEY"]
-if (Test-IsPlaceholder $minioKey -or (-not $minioKey) -or $minioKey.Length -lt 8) {
-    Set-EnvVariable $envPath "MINIO_APP_ACCESS_KEY" "local-minio-app-user"
+
+$minioAppKey = $envMap["MINIO_APP_ACCESS_KEY"]
+if (Test-IsInvalidMinioCredential $minioAppKey 8 -or $minioAppKey -eq $minioRootUser) {
+    $minioAppKey = "minio-app-" + (New-HexSecret 8)
+    Set-EnvVariable $envPath "MINIO_APP_ACCESS_KEY" $minioAppKey
+    Write-Host "Generated secure MINIO_APP_ACCESS_KEY" -ForegroundColor Green
 }
-$minioSecret = $envMap["MINIO_APP_SECRET_KEY"]
-if (Test-IsPlaceholder $minioSecret -or (-not $minioSecret) -or $minioSecret.Length -lt 8) {
-    Set-EnvVariable $envPath "MINIO_APP_SECRET_KEY" "local-minio-app-password-32-bytes"
+
+$minioAppSecret = $envMap["MINIO_APP_SECRET_KEY"]
+if (Test-IsInvalidMinioCredential $minioAppSecret 32 -or $minioAppSecret -eq $minioRootPass) {
+    $minioAppSecret = New-Base64UrlSecret 32
+    Set-EnvVariable $envPath "MINIO_APP_SECRET_KEY" $minioAppSecret
+    Write-Host "Generated secure MINIO_APP_SECRET_KEY" -ForegroundColor Green
 }
 
 # Reload env map after auto-generations

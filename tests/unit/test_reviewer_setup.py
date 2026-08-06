@@ -306,14 +306,14 @@ def test_all_docker_compose_ports_handled_by_automatic_resolver():
 
 
 def test_api_internal_health_check_and_minio_credentials_sanitization():
-    """Verify API container healthcheck uses internal port 8000 and MinIO credentials are non-placeholder."""
+    """Verify API container healthcheck uses internal port 8000 and setup scripts generate secure random MinIO credentials."""
     compose_path = ROOT_DIR / "docker-compose.yml"
     compose_content = compose_path.read_text(encoding="utf-8")
 
     # API healthcheck uses internal container port 8000 and matching /api/health/ready route
     assert "http://localhost:8000/api/health/ready" in compose_content
 
-    # .env.example contains valid non-placeholder MinIO credentials
+    # .env.example contains non-operational replace- placeholders for all MinIO credentials
     env_example_path = ROOT_DIR / ".env.example"
     env_example = env_example_path.read_text(encoding="utf-8")
     for key in [
@@ -322,17 +322,33 @@ def test_api_internal_health_check_and_minio_credentials_sanitization():
         "MINIO_APP_ACCESS_KEY=",
         "MINIO_APP_SECRET_KEY=",
     ]:
-        assert f"{key}replace-" not in env_example
+        assert f"{key}replace-" in env_example
 
-    # Setup scripts contain automatic MinIO credential sanitization logic
+    # Setup scripts contain secure random generation and invalid/public default replacement logic
     ps_content = PS_SCRIPT.read_text(encoding="utf-8")
     sh_content = SH_SCRIPT.read_text(encoding="utf-8")
 
-    assert "MINIO_ROOT_USER" in ps_content
-    assert "MINIO_ROOT_PASSWORD" in ps_content
-    assert "MINIO_APP_ACCESS_KEY" in ps_content
-    assert "MINIO_APP_SECRET_KEY" in ps_content
-    assert "MINIO_ROOT_USER" in sh_content
-    assert "MINIO_ROOT_PASSWORD" in sh_content
-    assert "MINIO_APP_ACCESS_KEY" in sh_content
-    assert "MINIO_APP_SECRET_KEY" in sh_content
+    # Cryptographically secure random generators
+    assert "[System.Security.Cryptography.RandomNumberGenerator]" in ps_content
+    assert "/dev/urandom" in sh_content or "import secrets" in sh_content
+
+    # Invalid credential checks covering public defaults
+    public_defaults = [
+        "local-minio-root-user",
+        "local-minio-root-password-32-bytes",
+        "local-minio-app-user",
+        "local-minio-app-password-32-bytes",
+    ]
+    for public_def in public_defaults:
+        assert public_def in ps_content
+        assert public_def in sh_content
+
+    # Safe notification messages without printing values
+    for var in [
+        "MINIO_ROOT_USER",
+        "MINIO_ROOT_PASSWORD",
+        "MINIO_APP_ACCESS_KEY",
+        "MINIO_APP_SECRET_KEY",
+    ]:
+        assert f"Generated secure {var}" in ps_content
+        assert f"Generated secure {var}" in sh_content

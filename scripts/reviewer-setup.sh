@@ -28,6 +28,17 @@ generate_secret() {
   fi
 }
 
+generate_hex_secret() {
+  local bytes="${1:-16}"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c "import secrets; print(secrets.token_hex($bytes))"
+  elif command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex "$bytes"
+  else
+    head -c 64 /dev/urandom | LC_ALL=C tr -dc 'a-f0-9' | fold -w $((bytes * 2)) | head -n 1
+  fi
+}
+
 is_placeholder() {
   local val="$1"
   if [ -z "$val" ]; then return 0; fi
@@ -35,6 +46,19 @@ is_placeholder() {
   lower="$(echo "$val" | tr '[:upper:]' '[:lower:]')"
   case "$lower" in
     replace-*|change-me*|changeme*|your-*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_minio_credential_invalid() {
+  local val="$1"
+  local min_len="${2:-8}"
+  if is_placeholder "$val"; then return 0; fi
+  if [ -z "$val" ] || [ "${#val}" -lt "$min_len" ]; then return 0; fi
+  local lower
+  lower="$(echo "$val" | tr '[:upper:]' '[:lower:]')"
+  case "$lower" in
+    local-minio-root-user|local-minio-root-password-32-bytes|local-minio-app-user|local-minio-app-password-32-bytes) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -216,23 +240,31 @@ if is_placeholder "$MASK_KEY" || [ "${#MASK_KEY}" -lt 32 ]; then
 fi
 
 MINIO_ROOT_USER="$(get_env_var "$ENV_PATH" "MINIO_ROOT_USER")"
-if is_placeholder "$MINIO_ROOT_USER" || [ -z "$MINIO_ROOT_USER" ] || [ "${#MINIO_ROOT_USER}" -lt 8 ]; then
-  set_env_var "$ENV_PATH" "MINIO_ROOT_USER" "local-minio-root-user"
+if is_minio_credential_invalid "$MINIO_ROOT_USER" 8; then
+  NEW_MINIO_ROOT_USER="minio-root-$(generate_hex_secret 8)"
+  set_env_var "$ENV_PATH" "MINIO_ROOT_USER" "$NEW_MINIO_ROOT_USER"
+  echo "Generated secure MINIO_ROOT_USER"
 fi
 
 MINIO_ROOT_PASSWORD="$(get_env_var "$ENV_PATH" "MINIO_ROOT_PASSWORD")"
-if is_placeholder "$MINIO_ROOT_PASSWORD" || [ -z "$MINIO_ROOT_PASSWORD" ] || [ "${#MINIO_ROOT_PASSWORD}" -lt 8 ]; then
-  set_env_var "$ENV_PATH" "MINIO_ROOT_PASSWORD" "local-minio-root-password-32-bytes"
+if is_minio_credential_invalid "$MINIO_ROOT_PASSWORD" 32; then
+  NEW_MINIO_ROOT_PASSWORD="$(generate_secret 32)"
+  set_env_var "$ENV_PATH" "MINIO_ROOT_PASSWORD" "$NEW_MINIO_ROOT_PASSWORD"
+  echo "Generated secure MINIO_ROOT_PASSWORD"
 fi
 
 MINIO_APP_ACCESS_KEY="$(get_env_var "$ENV_PATH" "MINIO_APP_ACCESS_KEY")"
-if is_placeholder "$MINIO_APP_ACCESS_KEY" || [ -z "$MINIO_APP_ACCESS_KEY" ] || [ "${#MINIO_APP_ACCESS_KEY}" -lt 8 ]; then
-  set_env_var "$ENV_PATH" "MINIO_APP_ACCESS_KEY" "local-minio-app-user"
+if is_minio_credential_invalid "$MINIO_APP_ACCESS_KEY" 8 || [ "$MINIO_APP_ACCESS_KEY" = "$MINIO_ROOT_USER" ]; then
+  NEW_MINIO_APP_KEY="minio-app-$(generate_hex_secret 8)"
+  set_env_var "$ENV_PATH" "MINIO_APP_ACCESS_KEY" "$NEW_MINIO_APP_KEY"
+  echo "Generated secure MINIO_APP_ACCESS_KEY"
 fi
 
 MINIO_APP_SECRET_KEY="$(get_env_var "$ENV_PATH" "MINIO_APP_SECRET_KEY")"
-if is_placeholder "$MINIO_APP_SECRET_KEY" || [ -z "$MINIO_APP_SECRET_KEY" ] || [ "${#MINIO_APP_SECRET_KEY}" -lt 8 ]; then
-  set_env_var "$ENV_PATH" "MINIO_APP_SECRET_KEY" "local-minio-app-password-32-bytes"
+if is_minio_credential_invalid "$MINIO_APP_SECRET_KEY" 32 || [ "$MINIO_APP_SECRET_KEY" = "$MINIO_ROOT_PASSWORD" ]; then
+  NEW_MINIO_APP_SECRET="$(generate_secret 32)"
+  set_env_var "$ENV_PATH" "MINIO_APP_SECRET_KEY" "$NEW_MINIO_APP_SECRET"
+  echo "Generated secure MINIO_APP_SECRET_KEY"
 fi
 
 CURRENT_GROQ="$(get_env_var "$ENV_PATH" "GROQ_API_KEY")"
