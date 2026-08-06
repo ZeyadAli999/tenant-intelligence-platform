@@ -210,3 +210,24 @@ def test_scripts_respect_environment_port_overrides_and_auto_resolution():
     assert 'Frontend URL:            http://localhost:${FRONTEND_PORT}' in sh_content
     assert 'API URL:                 http://localhost:${API_PORT}' in sh_content
     assert 'Health URL:              http://localhost:${API_PORT}/api/health/ready' in sh_content
+
+
+def test_minio_init_idempotency_and_bounded_readiness_retry():
+    """Verify minio-init in docker-compose.yml uses a bounded readiness retry loop and idempotent bucket commands."""
+    compose_path = ROOT_DIR / "docker-compose.yml"
+    compose_content = compose_path.read_text(encoding="utf-8")
+
+    # Bounded readiness retry loop
+    assert "until mc alias set" in compose_content
+    assert "30" in compose_content
+    assert "MinIO server at minio:9000 failed to respond" in compose_content
+
+    # Idempotency and safe bucket creation
+    assert "mc mb --ignore-existing" in compose_content
+    assert "mc admin user add" in compose_content
+    assert "mc admin policy attach" in compose_content
+
+    # Destructive commands must not be present
+    destructive = ["mc rb", "mc rm", "docker volume rm"]
+    for cmd in destructive:
+        assert cmd not in compose_content

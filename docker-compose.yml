@@ -64,7 +64,19 @@ services:
     entrypoint:
       - /bin/sh
       - -ec
-      - mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null && mc mb --ignore-existing "local/$${MINIO_BUCKET}" >/dev/null && (mc admin user add local "$${MINIO_APP_ACCESS_KEY}" "$${MINIO_APP_SECRET_KEY}" >/dev/null || true) && mc admin policy attach local readwrite --user "$${MINIO_APP_ACCESS_KEY}" >/dev/null
+      - >
+        i=0;
+        until mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null 2>&1; do
+          i=$$((i+1));
+          if [ $$i -ge 30 ]; then
+            echo "Error: MinIO server at minio:9000 failed to respond after 30 retries." >&2;
+            exit 1;
+          fi;
+          sleep 1;
+        done;
+        mc mb --ignore-existing "local/$${MINIO_BUCKET}" >/dev/null 2>&1 || true;
+        mc admin user add local "$${MINIO_APP_ACCESS_KEY}" "$${MINIO_APP_SECRET_KEY}" >/dev/null 2>&1 || true;
+        mc admin policy attach local readwrite --user "$${MINIO_APP_ACCESS_KEY}" >/dev/null 2>&1 || true;
     restart: "no"
 
   embedding-cache-init:
