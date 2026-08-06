@@ -1,0 +1,36 @@
+services:
+  api:
+    environment:
+      ALLOW_PRIVATE_DATABASE_HOSTS: "true"
+    depends_on:
+      customer-postgres:
+        condition: service_healthy
+
+  customer-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${CUSTOMER_POSTGRES_DB:-customer_demo}
+      POSTGRES_USER: ${CUSTOMER_POSTGRES_OWNER_USER:-customer_owner}
+      POSTGRES_PASSWORD: ${CUSTOMER_POSTGRES_OWNER_PASSWORD:-change-owner-password}
+      CUSTOMER_READER_USER: ${CUSTOMER_POSTGRES_READER_USER:-customer_reader}
+      CUSTOMER_READER_PASSWORD: ${CUSTOMER_POSTGRES_READER_PASSWORD:-change-reader-password}
+    volumes:
+      - ./tests/integration/customer_init.sql:/docker-entrypoint-initdb.d/001-customer-demo.sql:ro
+      - ./tests/integration/customer_reader_init.sh:/docker-entrypoint-initdb.d/002-customer-reader.sh:ro
+    tmpfs:
+      - /var/lib/postgresql/data
+    ports:
+      # Integration only: expose on the Docker Desktop private host interface so
+      # SSRF validation is exercised without weakening the loopback prohibition.
+      - "5433:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: "no"

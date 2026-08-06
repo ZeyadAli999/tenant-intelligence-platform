@@ -1,0 +1,16 @@
+"""Provider-independent private object-store contract."""
+
+from pathlib import Path
+from typing import Protocol
+
+
+class ObjectStore(Protocol):
+    async def put_file(
+        self, bucket: str, object_key: str, path: Path, checksum: str
+    ) -> None: ...
+    async def download_to_file(
+        self, bucket: str, object_key: str, path: Path
+    ) -> None: ...
+    async def delete(self, bucket: str, object_key: str) -> None: ...
+    async def exists(self, bucket: str, object_key: str) -> bool: ...
+    async def health_check(self) -> bool: ...

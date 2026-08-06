@@ -1,0 +1,229 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-text_to_sql}
+      POSTGRES_USER: ${POSTGRES_USER:-text_to_sql}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.0-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-local-minio-root-user}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local-minio-root-password-32-bytes}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-07-21T05-28-08Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-local-minio-root-user}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local-minio-root-password-32-bytes}
+      MINIO_APP_ACCESS_KEY: ${MINIO_APP_ACCESS_KEY:-local-minio-app-user}
+      MINIO_APP_SECRET_KEY: ${MINIO_APP_SECRET_KEY:-local-minio-app-password-32-bytes}
+      MINIO_BUCKET: ${MINIO_BUCKET:-documents}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null && mc mb --ignore-existing "local/$${MINIO_BUCKET}" >/dev/null && (mc admin user add local "$${MINIO_APP_ACCESS_KEY}" "$${MINIO_APP_SECRET_KEY}" >/dev/null || true) && mc admin policy attach local readwrite --user "$${MINIO_APP_ACCESS_KEY}" >/dev/null
+    restart: "no"
+
+  embedding-cache-init:
+    image: alpine:3.22
+    command: ["sh", "-c", "chown -R 100:101 /var/cache/fastembed"]
+    volumes:
+      - embedding_cache:/var/cache/fastembed
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: ${APP_NAME:-Multi-Tenant Text-to-SQL and Document Chat Platform}
+      APP_VERSION: ${APP_VERSION:-1.0.0}
+      API_PREFIX: ${API_PREFIX:-/api}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_ECHO: ${DATABASE_ECHO:-false}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-text_to_sql}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-text_to_sql}
+      JWT_SECRET: ${JWT_SECRET:-replace-with-at-least-32-random-bytes}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES:-15}
+      JWT_REFRESH_TOKEN_DAYS: ${JWT_REFRESH_TOKEN_DAYS:-30}
+      CONNECTION_ENCRYPTION_KEY: ${CONNECTION_ENCRYPTION_KEY:-replace-with-a-base64url-encoded-32-byte-key}
+      RESULT_MASKING_KEY: ${RESULT_MASKING_KEY:-replace-with-at-least-32-random-bytes}
+      ALLOW_PRIVATE_DATABASE_HOSTS: ${ALLOW_PRIVATE_DATABASE_HOSTS:-false}
+      CUSTOMER_DATABASE_CONNECT_TIMEOUT_SECONDS: ${CUSTOMER_DATABASE_CONNECT_TIMEOUT_SECONDS:-5}
+      CUSTOMER_DATABASE_COMMAND_TIMEOUT_SECONDS: ${CUSTOMER_DATABASE_COMMAND_TIMEOUT_SECONDS:-5}
+      SAFE_QUERY_LOCK_TIMEOUT_MS: ${SAFE_QUERY_LOCK_TIMEOUT_MS:-1000}
+      SAFE_QUERY_MAX_ROWS: ${SAFE_QUERY_MAX_ROWS:-100}
+      SAFE_QUERY_MAX_COLUMNS: ${SAFE_QUERY_MAX_COLUMNS:-50}
+      SAFE_QUERY_MAX_RESULT_BYTES: ${SAFE_QUERY_MAX_RESULT_BYTES:-1000000}
+      SAFE_QUERY_MAX_CELL_LENGTH: ${SAFE_QUERY_MAX_CELL_LENGTH:-4096}
+      SAFE_QUERY_MAX_JOINS: ${SAFE_QUERY_MAX_JOINS:-8}
+      SAFE_QUERY_MAX_SUBQUERY_DEPTH: ${SAFE_QUERY_MAX_SUBQUERY_DEPTH:-4}
+      SAFE_QUERY_MAX_CTES: ${SAFE_QUERY_MAX_CTES:-5}
+      SAFE_QUERY_MAX_SELECTED_COLUMNS: ${SAFE_QUERY_MAX_SELECTED_COLUMNS:-50}
+      GROQ_API_KEY: ${GROQ_API_KEY:?GROQ_API_KEY is required}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      GROQ_TIMEOUT_SECONDS: ${GROQ_TIMEOUT_SECONDS:-30}
+      GROQ_MAX_OUTPUT_TOKENS: ${GROQ_MAX_OUTPUT_TOKENS:-1200}
+      GROQ_MAX_RETRIES: ${GROQ_MAX_RETRIES:-2}
+      LLM_SCHEMA_MAX_TABLES: ${LLM_SCHEMA_MAX_TABLES:-8}
+      LLM_SCHEMA_MAX_COLUMNS: ${LLM_SCHEMA_MAX_COLUMNS:-60}
+      CHAT_MAX_MESSAGE_LENGTH: ${CHAT_MAX_MESSAGE_LENGTH:-4000}
+      CHAT_HISTORY_MESSAGES: ${CHAT_HISTORY_MESSAGES:-10}
+      CHAT_GRAPH_RECURSION_LIMIT: ${CHAT_GRAPH_RECURSION_LIMIT:-20}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_SECURE: ${MINIO_SECURE:-false}
+      MINIO_BUCKET: ${MINIO_BUCKET:-documents}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-local-minio-root-user}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local-minio-root-password-32-bytes}
+      MINIO_APP_ACCESS_KEY: ${MINIO_APP_ACCESS_KEY:-local-minio-app-user}
+      MINIO_APP_SECRET_KEY: ${MINIO_APP_SECRET_KEY:-local-minio-app-password-32-bytes}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-384}
+      EMBEDDING_CACHE_DIR: /var/cache/fastembed
+      HF_HUB_DISABLE_XET: "1"
+    command:
+      - /bin/sh
+      - -c
+      - alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - embedding_cache:/var/cache/fastembed
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      embedding-cache-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/ready', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-text_to_sql}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-text_to_sql}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_SECURE: ${MINIO_SECURE:-false}
+      MINIO_BUCKET: ${MINIO_BUCKET:-documents}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-local-minio-root-user}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local-minio-root-password-32-bytes}
+      MINIO_APP_ACCESS_KEY: ${MINIO_APP_ACCESS_KEY:-local-minio-app-user}
+      MINIO_APP_SECRET_KEY: ${MINIO_APP_SECRET_KEY:-local-minio-app-password-32-bytes}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-384}
+      EMBEDDING_CACHE_DIR: /var/cache/fastembed
+      HF_HUB_DISABLE_XET: "1"
+    command: ["dramatiq", "workers.document_tasks", "--processes", "1", "--threads", "1"]
+    volumes:
+      - embedding_cache:/var/cache/fastembed
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      embedding-cache-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_INTERNAL_URL: http://api:8000
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Tenant Intelligence}
+      COOKIE_SECURE: "false"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:3000/api/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  embedding_cache:

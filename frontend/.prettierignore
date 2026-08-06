@@ -1,0 +1,10 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+tsconfig.tsbuildinfo
+visual-test-output
+auth-state
+accessibility-reports
+package-lock.json

@@ -1,0 +1,6 @@
+Alembic migration environment for the application PostgreSQL database.
+
+The Phase 1 baseline is intentionally empty. Phase 2 adds tenants, users, roles,
+tenant-consistent user-role assignments, and hashed refresh-token sessions in revision
+20260803_0002. Future schema changes must be added as new revisions rather than
+modifying an already-applied revision.

@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+:root {
+  --page: #f7f8fa;
+  --sidebar: #fbfcfd;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-subtle: #f1f3f5;
+  --text: #111827;
+  --text-secondary: #5f697a;
+  --text-muted: #5f697a;
+  --border: #e4e7ec;
+  --border-strong: #d0d5dd;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success: #15803d;
+  --warning: #a16207;
+  --danger: #c2413b;
+  --focus: #93c5fd;
+  --nav-selected: #eaf1ff;
+  --code-surface: #eef1f5;
+}
+
+[data-theme="dark"] {
+  --page: #111318;
+  --sidebar: #15181e;
+  --surface: #181b22;
+  --surface-elevated: #1c2028;
+  --surface-subtle: #20242c;
+  --text: #f3f4f6;
+  --text-secondary: #a7adb8;
+  --text-muted: #9ca3af;
+  --border: #2b3039;
+  --border-strong: #3a414d;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --focus: #2563eb;
+  --nav-selected: #202c42;
+  --code-surface: #0f1116;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #111318;
+    --sidebar: #15181e;
+    --surface: #181b22;
+    --surface-elevated: #1c2028;
+    --surface-subtle: #20242c;
+    --text: #f3f4f6;
+    --text-secondary: #a7adb8;
+    --text-muted: #9ca3af;
+    --border: #2b3039;
+    --border-strong: #3a414d;
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --focus: #2563eb;
+    --nav-selected: #202c42;
+    --code-surface: #0f1116;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  background: var(--page);
+  color: var(--text);
+}
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+.chat-frame {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 0;
+}
+@media (min-width: 1024px) {
+  .chat-frame {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+@media (min-width: 1280px) {
+  .chat-frame {
+    grid-template-columns: 280px minmax(0, 1fr) 350px;
+  }
+}
+.primary-button,
+.secondary-button,
+.danger-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.primary-button {
+  background: var(--primary);
+  color: white;
+}
+.primary-button:hover {
+  background: var(--primary-hover);
+}
+.secondary-button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+.danger-button {
+  background: var(--danger);
+  color: white;
+}
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.icon-button {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--text-secondary);
+}
+.icon-button:hover {
+  background: var(--surface-subtle);
+  color: var(--text);
+}
+.field {
+  display: block;
+  height: 2.625rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+}
+.source-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+}
+.empty-inline {
+  border-radius: 0.375rem;
+  background: var(--surface-subtle);
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.text-button {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.detail-list {
+  display: grid;
+  gap: 1rem;
+  font-size: 0.8125rem;
+}
+.detail-list dt {
+  margin-bottom: 0.2rem;
+  color: var(--text-muted);
+}
+.detail-list dd {
+  color: var(--text);
+  font-weight: 500;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  a,
+  button,
+  input {
+    transition:
+      color 160ms,
+      background-color 160ms,
+      border-color 160ms,
+      opacity 160ms,
+      transform 160ms;
+  }
+}

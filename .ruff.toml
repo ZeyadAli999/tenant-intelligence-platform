@@ -1,0 +1,4 @@
+[lint]
+# Docker Desktop bind mounts report every Windows source file as executable.
+# EXE002 would therefore flag the entire tree despite normal Windows file metadata.
+ignore = ["EXE002"]
