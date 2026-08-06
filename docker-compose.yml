@@ -10,7 +10,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,14 +23,7 @@ services:
 
   redis:
     image: redis:8.0-alpine
-    command:
-      [
-        "redis-server",
-        "--appendonly",
-        "yes",
-        "--maxmemory-policy",
-        "noeviction",
-      ]
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -182,15 +179,7 @@ services:
       EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-384}
       EMBEDDING_CACHE_DIR: /var/cache/fastembed
       HF_HUB_DISABLE_XET: "1"
-    command:
-      [
-        "dramatiq",
-        "workers.document_tasks",
-        "--processes",
-        "1",
-        "--threads",
-        "1",
-      ]
+    command: ["dramatiq", "workers.document_tasks", "--processes", "1", "--threads", "1"]
     volumes:
       - embedding_cache:/var/cache/fastembed
     depends_on:
