@@ -246,39 +246,39 @@ the local `.env` or a production secret manager:
 python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b'=').decode())"
 ```
 
-| Variable | Purpose | Example/default |
-| --- | --- | --- |
-| `APP_NAME` | OpenAPI and health service name | `Multi-Tenant Text-to-SQL and Document Chat Platform` |
-| `APP_VERSION` | Health and OpenAPI version | `1.0.0` |
-| `API_PREFIX` | Enforced public API prefix | `/api` |
-| `ENVIRONMENT` | Runtime environment | `development` |
-| `DEBUG` | Must remain false to prevent traceback responses | `false` |
-| `LOG_LEVEL` | Process log threshold | `INFO` |
-| `DATABASE_ECHO` | SQL statement logging; parameter values remain hidden | `false` |
-| `DATABASE_URL` | Async PostgreSQL URL using `postgresql+asyncpg` | See `.env.example` |
-| `JWT_SECRET` | HMAC key; required, non-placeholder, at least 32 bytes | No default |
-| `JWT_ALGORITHM` | Explicit symmetric algorithm allowlist | `HS256` |
-| `JWT_ACCESS_TOKEN_MINUTES` | Access-token lifetime, 1-60 minutes | `15` |
-| `JWT_REFRESH_TOKEN_DAYS` | Refresh-token lifetime, 1-90 days | `30` |
-| `CONNECTION_ENCRYPTION_KEY` | Required base64url AES-256 key | No default |
-| `ALLOW_PRIVATE_DATABASE_HOSTS` | Permit resolved private customer hosts | `false` |
-| `CUSTOMER_DATABASE_CONNECT_TIMEOUT_SECONDS` | Customer connection timeout | `5` |
-| `CUSTOMER_DATABASE_COMMAND_TIMEOUT_SECONDS` | Customer catalog command timeout | `5` |
-| `GROQ_API_KEY` | Required Groq Cloud secret; no placeholder or default | No default |
-| `GROQ_MODEL` | Sole supported Groq-hosted model | `openai/gpt-oss-120b` |
-| `GROQ_TIMEOUT_SECONDS` | Per-Groq-call timeout | `30` |
-| `GROQ_MAX_OUTPUT_TOKENS` | Structured response output bound | `1200` |
-| `GROQ_MAX_RETRIES` | Bounded transient-failure retry count | `2` |
-| `LLM_SCHEMA_MAX_TABLES` | Allowed-schema prompt table cap | `8` |
-| `LLM_SCHEMA_MAX_COLUMNS` | Allowed-schema prompt column cap | `60` |
-| `CHAT_MAX_MESSAGE_LENGTH` | User message length limit | `4000` |
-| `CHAT_HISTORY_MESSAGES` | Prior safe-message history cap | `10` |
-| `CHAT_GRAPH_RECURSION_LIMIT` | LangGraph recursion bound | `20` |
-| `POSTGRES_DB` | Compose database name | `text_to_sql` |
-| `POSTGRES_USER` | Compose database user | `text_to_sql` |
-| `POSTGRES_PASSWORD` | Compose database password | `change-me` |
-| `POSTGRES_PORT` | PostgreSQL host port | `5432` |
-| `API_PORT` | FastAPI host port | `8000` |
+| Variable                                    | Purpose                                                | Example/default                                       |
+| ------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------- |
+| `APP_NAME`                                  | OpenAPI and health service name                        | `Multi-Tenant Text-to-SQL and Document Chat Platform` |
+| `APP_VERSION`                               | Health and OpenAPI version                             | `1.0.0`                                               |
+| `API_PREFIX`                                | Enforced public API prefix                             | `/api`                                                |
+| `ENVIRONMENT`                               | Runtime environment                                    | `development`                                         |
+| `DEBUG`                                     | Must remain false to prevent traceback responses       | `false`                                               |
+| `LOG_LEVEL`                                 | Process log threshold                                  | `INFO`                                                |
+| `DATABASE_ECHO`                             | SQL statement logging; parameter values remain hidden  | `false`                                               |
+| `DATABASE_URL`                              | Async PostgreSQL URL using `postgresql+asyncpg`        | See `.env.example`                                    |
+| `JWT_SECRET`                                | HMAC key; required, non-placeholder, at least 32 bytes | No default                                            |
+| `JWT_ALGORITHM`                             | Explicit symmetric algorithm allowlist                 | `HS256`                                               |
+| `JWT_ACCESS_TOKEN_MINUTES`                  | Access-token lifetime, 1-60 minutes                    | `15`                                                  |
+| `JWT_REFRESH_TOKEN_DAYS`                    | Refresh-token lifetime, 1-90 days                      | `30`                                                  |
+| `CONNECTION_ENCRYPTION_KEY`                 | Required base64url AES-256 key                         | No default                                            |
+| `ALLOW_PRIVATE_DATABASE_HOSTS`              | Permit resolved private customer hosts                 | `false`                                               |
+| `CUSTOMER_DATABASE_CONNECT_TIMEOUT_SECONDS` | Customer connection timeout                            | `5`                                                   |
+| `CUSTOMER_DATABASE_COMMAND_TIMEOUT_SECONDS` | Customer catalog command timeout                       | `5`                                                   |
+| `GROQ_API_KEY`                              | Required Groq Cloud secret; no placeholder or default  | No default                                            |
+| `GROQ_MODEL`                                | Sole supported Groq-hosted model                       | `openai/gpt-oss-120b`                                 |
+| `GROQ_TIMEOUT_SECONDS`                      | Per-Groq-call timeout                                  | `30`                                                  |
+| `GROQ_MAX_OUTPUT_TOKENS`                    | Structured response output bound                       | `1200`                                                |
+| `GROQ_MAX_RETRIES`                          | Bounded transient-failure retry count                  | `2`                                                   |
+| `LLM_SCHEMA_MAX_TABLES`                     | Allowed-schema prompt table cap                        | `8`                                                   |
+| `LLM_SCHEMA_MAX_COLUMNS`                    | Allowed-schema prompt column cap                       | `60`                                                  |
+| `CHAT_MAX_MESSAGE_LENGTH`                   | User message length limit                              | `4000`                                                |
+| `CHAT_HISTORY_MESSAGES`                     | Prior safe-message history cap                         | `10`                                                  |
+| `CHAT_GRAPH_RECURSION_LIMIT`                | LangGraph recursion bound                              | `20`                                                  |
+| `POSTGRES_DB`                               | Compose database name                                  | `text_to_sql`                                         |
+| `POSTGRES_USER`                             | Compose database user                                  | `text_to_sql`                                         |
+| `POSTGRES_PASSWORD`                         | Compose database password                              | `change-me`                                           |
+| `POSTGRES_PORT`                             | PostgreSQL host port                                   | `5432`                                                |
+| `API_PORT`                                  | FastAPI host port                                      | `8000`                                                |
 
 Missing or placeholder JWT secrets and malformed encryption keys fail configuration.
 Pydantic error output is configured not to echo rejected secret values.
@@ -419,7 +419,7 @@ relationships whose endpoints are not both visible.
     {
       "column_id": "11111111-1111-1111-1111-111111111111",
       "operator": "eq",
-      "value": {"source": "literal", "value": "Egypt"}
+      "value": { "source": "literal", "value": "Egypt" }
     }
   ]
 }
