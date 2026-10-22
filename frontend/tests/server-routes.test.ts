@@ -1,6 +1,18 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+// Vitest hoists vi.mock factories: state used by the factory must be hoisted too.
+const sessionCookies = vi.hoisted(() => new Map<string, string>());
+
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => {
+      const value = sessionCookies.get(name);
+      return value === undefined ? undefined : { value };
+    },
+  }),
+}));
+
 const validTokens = {
   access_token: "test-access-token",
   refresh_token: "test-refresh-token",
@@ -170,18 +182,16 @@ describe("login BFF", () => {
 
 describe("session authenticatedFetch behavior", () => {
   beforeEach(() => {
+    sessionCookies.clear();
     vi.stubEnv("BACKEND_INTERNAL_URL", "http://backend.internal:8000");
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    sessionCookies.clear();
+    vi.unstubAllEnvs();
+  });
 
   test("attempts refreshSession when access cookie is missing but refresh cookie exists", async () => {
-    const mockCookies = {
-      get: (name: string) =>
-        name === "ti_refresh" ? { value: "valid-refresh-token" } : undefined,
-    };
-    vi.mock("next/headers", () => ({
-      cookies: async () => mockCookies,
-    }));
+    sessionCookies.set("ti_refresh", "valid-refresh-token");
 
     const fetchMock = vi.fn(async (url: string | URL) => {
       const urlStr = url.toString();
