@@ -1,5 +1,51 @@
 # Tenant Intelligence
 
+> **Independent ITI AI training project | Full-stack AI systems, secure Text-to-SQL, and retrieval-augmented generation**
+>
+> An engineering portfolio project demonstrating how an LLM-powered application can answer questions over tenant-owned databases and documents **without giving the model authority over permissions or raw data access**.
+
+## Engineering overview
+
+| Area | Implemented approach |
+| --- | --- |
+| **Database questions** | Allowed-schema retrieval, structured LLM output, SQLGlot AST validation, row-filter enforcement, read-only query execution, and answer grounding |
+| **Document questions** | PDF/DOCX ingestion, asynchronous processing, local embeddings, pgvector + lexical retrieval, and source citations |
+| **Hybrid questions** | Combine authorized database results with permitted document evidence before generating an answer |
+| **Tenant security** | Authenticated tenant resolution, deny-by-default permissions, column masking, token rotation, and server-side policy enforcement |
+| **Application architecture** | Next.js frontend/BFF, FastAPI API, PostgreSQL, Redis/Dramatiq workers, MinIO, and Docker Compose |
+
+### Architecture at a glance
+
+```mermaid
+flowchart LR
+    UI["Next.js UI / server-side BFF"] --> API["FastAPI application"]
+    API --> AUTH["Authenticated tenant context + permissions"]
+    AUTH --> DB["Validated read-only SQL path"]
+    AUTH --> DOC["Authorized document retrieval"]
+    DB --> CUSTOMER[("Customer PostgreSQL")]
+    DOC --> INDEX[("Tenant-scoped retrieval index")]
+    API --> PLATFORM[("Platform PostgreSQL")]
+    API --> WORKER["Redis / Dramatiq document worker"]
+    WORKER --> STORE[("MinIO documents")]
+```
+
+### Engineering decisions worth reviewing
+
+- **Authorization is deterministic, not delegated to an LLM.** The server resolves tenant identity, effective schema visibility, row policies, and masking before exposing evidence to an answer generator.
+- **Generated SQL is treated as untrusted input.** SQLGlot validates the parsed query; table/column permissions, mandatory filters, and read-only access are applied before execution.
+- **Source evidence is explicit.** Database and document answers carry controlled metadata and citations rather than exposing unrestricted source contents.
+- **Local reproducibility matters.** Docker Compose, migration scripts, health endpoints, backend tests, frontend checks, and reviewer setup scripts are included.
+
+### Start here
+
+**Review the implementation:** [Architecture](#architecture) · [Security model](#security-model) · [Tests](#tests) · [Security details](SECURITY.md) · [Source code](api/) · [Frontend](frontend/)
+
+**Run a local review:** See [Reviewer Quick Start](#reviewer-quick-start) below. The stack requires Docker and a user-supplied Groq API key; no usable secrets are included in the repository.
+
+**Scope note:** This is an engineering/training project, not an independently audited production security product. Current implementation supports PostgreSQL customer databases and text-based PDF/DOCX ingestion; OCR and scanned-PDF extraction are outside the documented scope.
+
+---
+
 ## Instructor Evaluation Access
 
 > [!IMPORTANT]
