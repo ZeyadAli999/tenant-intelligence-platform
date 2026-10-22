@@ -144,24 +144,26 @@ def test_powershell_root_resolution_uses_psscriptroot():
 
 
 def test_readme_public_naming_and_instructor_content():
-    """Verify README.md is sanitized of internal names and contains required instructor details."""
-    readme_path = ROOT_DIR / "README.md"
-    readme_content = readme_path.read_text(encoding="utf-8")
-    readme_lower = readme_content.lower()
+    """Validate public onboarding and preserve historical instructor instructions."""
+    readme_content = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
+    readme_lower = readme_content.casefold()
+    instructor_reference = (
+        ROOT_DIR / "docs/reference/full-technical-reference-2026.md"
+    ).read_text(encoding="utf-8")
 
-    # Sanitization checks
-    assert "copilot" not in readme_lower
-    assert "codex" not in readme_lower
-    assert "antigravity" not in readme_lower
-
-    # Required instructions and placeholders
-    assert "cd <path-to-downloaded-repository>" in readme_content
-    assert "00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS" in readme_content
-    assert "Option 1:" in readme_content
-    assert "Option 2:" in readme_content
+    for internal_name in ("copilot", "codex", "antigravity"):
+        assert internal_name not in readme_lower
+    assert "Architecture" in readme_content
+    assert "security" in readme_lower
     assert r".\scripts\reviewer-setup.ps1" in readme_content
-    assert "instructor-review" in readme_content
-    assert "instructor@demo.example" in readme_content
+    assert "docs/reference/full-technical-reference-2026.md" in readme_content
+
+    assert "cd <path-to-downloaded-repository>" in instructor_reference
+    assert "00 — INSTRUCTOR ACCESS & LOGIN CREDENTIALS" in instructor_reference
+    assert "Option 1:" in instructor_reference
+    assert "Option 2:" in instructor_reference
+    assert "instructor-review" in instructor_reference
+    assert "instructor@demo.example" in instructor_reference
 
 
 def test_postgres_port_conflict_prevention_and_internal_endpoint():
