@@ -1,5 +1,7 @@
 # Tenant Intelligence
 
+[![Engineering checks](https://github.com/ZeyadAli999/tenant-intelligence-platform/actions/workflows/engineering-checks.yml/badge.svg)](https://github.com/ZeyadAli999/tenant-intelligence-platform/actions/workflows/engineering-checks.yml)
+
 **Secure LLM applications · Text-to-SQL · RAG · Multi-tenant backend engineering**
 
 An independently built ITI AI training project demonstrating how an AI assistant can answer questions over tenant-authorized PostgreSQL data and uploaded documents **without letting the language model decide access rights**.
